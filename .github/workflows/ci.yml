@@ -1,0 +1,42 @@
+name: ShieldOps CI Pipeline
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Display system info
+        run: |
+          echo "Pipeline started successfully"
+          docker --version
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Stage
+        run: echo "Docker build will happen here"
+
+      - name: Test Stage
+        run: echo "Tests will run here"
+
+      - name: SAST Scan
+        run: echo "Semgrep will run here"
+
+      - name: Dependency Scan
+        run: echo "Trivy scan will run here"
+
+      - name: DAST Scan
+        run: echo "OWASP ZAP will run here"
+
+      - name: Upload Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-reports
+          path: .
