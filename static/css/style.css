@@ -145,6 +145,14 @@ body {
     margin-top: 5px;
 }
 
+.help-text {
+    display: block;
+    font-size: 0.85em;
+    color: #888;
+    margin-top: 5px;
+    font-style: italic;
+}
+
 .btn-primary {
     width: 100%;
     padding: 15px;
@@ -164,6 +172,28 @@ body {
 }
 
 .btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    width: 100%;
+    padding: 12px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+}
+
+.btn-secondary:active {
     transform: translateY(0);
 }
 
@@ -378,5 +408,127 @@ body {
     .header {
         flex-direction: column;
         gap: 20px;
+    }
+}
+
+/* Reasoning Card */
+.reasoning-card {
+    background: #f0f7ff;
+    border-left: 4px solid #667eea;
+}
+
+.reasoning-list {
+    list-style: none;
+    padding: 0;
+}
+
+.reasoning-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 0.95em;
+    color: #555;
+}
+
+.reasoning-item:last-child {
+    border-bottom: none;
+}
+
+.reasoning-item:before {
+    content: "→ ";
+    color: #667eea;
+    font-weight: bold;
+}
+
+/* Re-evaluation Section */
+.reevaluation-section {
+    margin-top: 20px;
+    padding: 20px;
+    background: #fff9e6;
+    border-radius: 10px;
+    border: 2px dashed #FFC107;
+}
+
+.reevaluation-section h3 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+}
+
+.form-group-inline {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+textarea {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.95em;
+    resize: vertical;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+/* Learnings Section */
+.learnings-section {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    margin-top: 30px;
+}
+
+.learnings-section h2 {
+    color: #333;
+    margin-bottom: 20px;
+    border-bottom: 3px solid #4CAF50;
+    padding-bottom: 10px;
+}
+
+.insights-container {
+    display: grid;
+    gap: 15px;
+}
+
+.insight-item {
+    padding: 15px;
+    background: #f0fff4;
+    border-left: 4px solid #4CAF50;
+    border-radius: 8px;
+    font-size: 0.95em;
+    color: #555;
+}
+
+.insight-item:before {
+    content: "💡 ";
+    font-size: 1.2em;
+}
+
+/* Change indicators */
+.change-positive {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.change-negative {
+    color: #f44336;
+    font-weight: bold;
+}
+
+.change-neutral {
+    color: #888;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .form-group-inline {
+        grid-template-columns: 1fr;
     }
 }

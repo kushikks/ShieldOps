@@ -35,26 +35,41 @@ class TestRiskCalculation:
     
     def test_low_risk_scenario(self):
         """Test low severity and low population"""
-        risk = calculate_risk_score(severity=2, population=500)
+        risk, reasoning = calculate_risk_score(severity=2, population=500, resources_available=70, infrastructure_quality=70)
         assert risk < 40
         assert determine_priority(risk) == 'LOW'
+        assert len(reasoning) > 0
     
     def test_medium_risk_scenario(self):
         """Test medium severity and medium population"""
-        risk = calculate_risk_score(severity=5, population=5000)
+        risk, reasoning = calculate_risk_score(severity=6, population=50000, resources_available=40, infrastructure_quality=40)
         assert 40 <= risk < 70
         assert determine_priority(risk) == 'MEDIUM'
+        assert len(reasoning) > 0
     
     def test_high_risk_scenario(self):
         """Test high severity and high population"""
-        risk = calculate_risk_score(severity=9, population=200000)
+        risk, reasoning = calculate_risk_score(severity=10, population=200000, resources_available=20, infrastructure_quality=20)
         assert risk >= 70
         assert determine_priority(risk) == 'HIGH'
+        assert len(reasoning) > 0
     
     def test_risk_score_cap(self):
         """Test risk score is capped at 100"""
-        risk = calculate_risk_score(severity=10, population=1000000)
+        risk, reasoning = calculate_risk_score(severity=10, population=1000000, resources_available=0, infrastructure_quality=0)
         assert risk <= 100
+    
+    def test_resources_reduce_risk(self):
+        """Test that higher resources reduce risk"""
+        risk_low_resources, _ = calculate_risk_score(severity=7, population=50000, resources_available=20, infrastructure_quality=50)
+        risk_high_resources, _ = calculate_risk_score(severity=7, population=50000, resources_available=80, infrastructure_quality=50)
+        assert risk_high_resources < risk_low_resources
+    
+    def test_infrastructure_reduces_risk(self):
+        """Test that better infrastructure reduces risk"""
+        risk_poor_infra, _ = calculate_risk_score(severity=7, population=50000, resources_available=50, infrastructure_quality=20)
+        risk_good_infra, _ = calculate_risk_score(severity=7, population=50000, resources_available=50, infrastructure_quality=80)
+        assert risk_good_infra < risk_poor_infra
 
 
 class TestSimulationEndpoint:
@@ -65,7 +80,9 @@ class TestSimulationEndpoint:
         payload = {
             'disaster_type': 'flood',
             'severity': 7,
-            'population': 50000
+            'population': 50000,
+            'resources_available': 50,
+            'infrastructure_quality': 50
         }
         
         response = client.post('/api/simulate',
@@ -81,7 +98,9 @@ class TestSimulationEndpoint:
         assert 'risk_score' in data
         assert 'priority' in data
         assert 'recommendation' in data
+        assert 'reasoning' in data
         assert data['priority'] in ['LOW', 'MEDIUM', 'HIGH']
+        assert len(data['reasoning']) > 0
     
     def test_valid_earthquake_simulation(self, client):
         """Test valid earthquake disaster simulation"""
@@ -293,7 +312,9 @@ class TestEdgeCases:
         payload = {
             'disaster_type': 'tsunami',
             'severity': 10,
-            'population': 1000000
+            'population': 1000000,
+            'resources_available': 20,
+            'infrastructure_quality': 20
         }
         
         response = client.post('/api/simulate',
@@ -307,3 +328,111 @@ class TestEdgeCases:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+
+class TestReevaluation:
+    """Test re-evaluation functionality"""
+    
+    def test_reevaluate_with_improved_resources(self, client):
+        """Test re-evaluation with improved resources"""
+        # Initial simulation
+        payload = {
+            'disaster_type': 'earthquake',
+            'severity': 8,
+            'population': 75000,
+            'resources_available': 30,
+            'infrastructure_quality': 40
+        }
+        
+        response = client.post('/api/simulate',
+                              data=json.dumps(payload),
+                              content_type='application/json')
+        initial_data = json.loads(response.data)
+        
+        # Re-evaluate with improved resources
+        reevaluate_payload = {
+            'original_timestamp': initial_data['timestamp'],
+            'new_findings': {
+                'resources_available': 70,
+                'infrastructure_quality': 40,
+                'additional_notes': 'Emergency supplies arrived'
+            }
+        }
+        
+        response = client.post('/api/reevaluate',
+                              data=json.dumps(reevaluate_payload),
+                              content_type='application/json')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        assert 'original_simulation' in data
+        assert 'updated_assessment' in data
+        assert 'changes' in data
+        assert data['changes']['risk_change'] < 0  # Risk should decrease
+    
+    def test_reevaluate_nonexistent_simulation(self, client):
+        """Test re-evaluation of non-existent simulation"""
+        payload = {
+            'original_timestamp': '2024-01-01T00:00:00',
+            'new_findings': {
+                'resources_available': 70
+            }
+        }
+        
+        response = client.post('/api/reevaluate',
+                              data=json.dumps(payload),
+                              content_type='application/json')
+        
+        assert response.status_code == 404
+
+
+class TestLearnings:
+    """Test learning and insights functionality"""
+    
+    def test_learnings_endpoint(self, client):
+        """Test learnings endpoint"""
+        response = client.get('/api/learnings')
+        assert response.status_code == 200
+        
+        data = json.loads(response.data)
+        assert 'learnings' in data
+        assert 'count' in data
+        assert 'insights' in data
+    
+    def test_learnings_after_reevaluation(self, client):
+        """Test that learnings are recorded after re-evaluation"""
+        # Initial simulation
+        payload = {
+            'disaster_type': 'flood',
+            'severity': 7,
+            'population': 50000,
+            'resources_available': 40,
+            'infrastructure_quality': 50
+        }
+        
+        response = client.post('/api/simulate',
+                              data=json.dumps(payload),
+                              content_type='application/json')
+        initial_data = json.loads(response.data)
+        
+        # Re-evaluate
+        reevaluate_payload = {
+            'original_timestamp': initial_data['timestamp'],
+            'new_findings': {
+                'resources_available': 80,
+                'infrastructure_quality': 70,
+                'additional_notes': 'Situation improved'
+            }
+        }
+        
+        client.post('/api/reevaluate',
+                   data=json.dumps(reevaluate_payload),
+                   content_type='application/json')
+        
+        # Check learnings
+        response = client.get('/api/learnings')
+        data = json.loads(response.data)
+        
+        assert data['count'] > 0

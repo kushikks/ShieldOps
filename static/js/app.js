@@ -7,14 +7,48 @@ const statusText = document.getElementById('statusText');
 const simulationForm = document.getElementById('simulationForm');
 const severitySlider = document.getElementById('severity');
 const severityValue = document.getElementById('severityValue');
+const resourcesSlider = document.getElementById('resources');
+const resourcesValue = document.getElementById('resourcesValue');
+const infrastructureSlider = document.getElementById('infrastructure');
+const infrastructureValue = document.getElementById('infrastructureValue');
 const resultsPanel = document.getElementById('resultsPanel');
 const insightsPanel = document.getElementById('insightsPanel');
 const historySection = document.getElementById('historySection');
+const learningsSection = document.getElementById('learningsSection');
 
-// Update severity value display
+// Store current simulation data
+let currentSimulation = null;
+
+// Update slider value displays
 severitySlider.addEventListener('input', (e) => {
     severityValue.textContent = e.target.value;
 });
+
+resourcesSlider.addEventListener('input', (e) => {
+    resourcesValue.textContent = e.target.value;
+});
+
+infrastructureSlider.addEventListener('input', (e) => {
+    infrastructureValue.textContent = e.target.value;
+});
+
+// Update new resources/infrastructure sliders
+const newResourcesSlider = document.getElementById('newResources');
+const newResourcesValue = document.getElementById('newResourcesValue');
+const newInfrastructureSlider = document.getElementById('newInfrastructure');
+const newInfrastructureValue = document.getElementById('newInfrastructureValue');
+
+if (newResourcesSlider) {
+    newResourcesSlider.addEventListener('input', (e) => {
+        newResourcesValue.textContent = e.target.value;
+    });
+}
+
+if (newInfrastructureSlider) {
+    newInfrastructureSlider.addEventListener('input', (e) => {
+        newInfrastructureValue.textContent = e.target.value;
+    });
+}
 
 // Check system health on load
 async function checkHealth() {
@@ -44,6 +78,8 @@ simulationForm.addEventListener('submit', async (e) => {
     const disasterType = document.getElementById('disasterType').value;
     const severity = parseInt(document.getElementById('severity').value);
     const population = parseInt(document.getElementById('population').value);
+    const resources = parseInt(document.getElementById('resources').value);
+    const infrastructure = parseInt(document.getElementById('infrastructure').value);
     
     // Disable button during request
     const submitBtn = document.getElementById('simulateBtn');
@@ -59,7 +95,9 @@ simulationForm.addEventListener('submit', async (e) => {
             body: JSON.stringify({
                 disaster_type: disasterType,
                 severity: severity,
-                population: population
+                population: population,
+                resources_available: resources,
+                infrastructure_quality: infrastructure
             })
         });
         
@@ -68,8 +106,10 @@ simulationForm.addEventListener('submit', async (e) => {
         }
         
         const data = await response.json();
+        currentSimulation = data;
         displayResults(data);
         await loadHistory();
+        await loadLearnings();
         
     } catch (error) {
         alert('Simulation failed: ' + error.message);
@@ -101,6 +141,18 @@ function displayResults(data) {
     // Update recommendation
     document.getElementById('recommendationText').textContent = data.recommendation;
     
+    // Display reasoning
+    if (data.reasoning) {
+        const reasoningList = document.getElementById('reasoningList');
+        reasoningList.innerHTML = '';
+        data.reasoning.forEach(reason => {
+            const item = document.createElement('div');
+            item.className = 'reasoning-item';
+            item.textContent = reason;
+            reasoningList.appendChild(item);
+        });
+    }
+    
     // Update gauge
     updateGauge(data.risk_score);
     
@@ -108,6 +160,18 @@ function displayResults(data) {
     document.getElementById('detailType').textContent = data.disaster_type.charAt(0).toUpperCase() + data.disaster_type.slice(1);
     document.getElementById('detailSeverity').textContent = data.severity + '/10';
     document.getElementById('detailPopulation').textContent = data.population.toLocaleString();
+    document.getElementById('detailResources').textContent = data.resources_available + '%';
+    document.getElementById('detailInfrastructure').textContent = data.infrastructure_quality + '%';
+    
+    // Set up re-evaluation sliders with current values
+    if (newResourcesSlider) {
+        newResourcesSlider.value = data.resources_available;
+        newResourcesValue.textContent = data.resources_available;
+    }
+    if (newInfrastructureSlider) {
+        newInfrastructureSlider.value = data.infrastructure_quality;
+        newInfrastructureValue.textContent = data.infrastructure_quality;
+    }
     
     // Apply color theme based on priority
     applyTheme(data.priority);
@@ -191,7 +255,111 @@ function displayHistory(history) {
 document.addEventListener('DOMContentLoaded', () => {
     checkHealth();
     loadHistory();
+    loadLearnings();
     
     // Refresh health check every 30 seconds
     setInterval(checkHealth, 30000);
 });
+
+
+// Handle re-evaluation
+const reevaluateBtn = document.getElementById('reevaluateBtn');
+if (reevaluateBtn) {
+    reevaluateBtn.addEventListener('click', async () => {
+        if (!currentSimulation) {
+            alert('No simulation to re-evaluate');
+            return;
+        }
+        
+        const newResources = parseInt(newResourcesSlider.value);
+        const newInfrastructure = parseInt(newInfrastructureSlider.value);
+        const additionalNotes = document.getElementById('additionalNotes').value;
+        
+        reevaluateBtn.disabled = true;
+        reevaluateBtn.textContent = 'Re-evaluating...';
+        
+        try {
+            const response = await fetch(`${API_BASE}/api/reevaluate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    original_timestamp: currentSimulation.timestamp,
+                    new_findings: {
+                        resources_available: newResources,
+                        infrastructure_quality: newInfrastructure,
+                        additional_notes: additionalNotes
+                    }
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Re-evaluation failed');
+            }
+            
+            const data = await response.json();
+            displayReevaluationResults(data);
+            await loadLearnings();
+            
+        } catch (error) {
+            alert('Re-evaluation failed: ' + error.message);
+            console.error('Re-evaluation error:', error);
+        } finally {
+            reevaluateBtn.disabled = false;
+            reevaluateBtn.textContent = 'Re-evaluate Risk';
+        }
+    });
+}
+
+// Display re-evaluation results
+function displayReevaluationResults(data) {
+    const updated = data.updated_assessment;
+    const changes = data.changes;
+    
+    // Update current simulation
+    currentSimulation = updated;
+    
+    // Display updated results
+    displayResults(updated);
+    
+    // Show change notification
+    const changeMessage = `
+        Risk changed by ${changes.risk_change > 0 ? '+' : ''}${changes.risk_change.toFixed(1)} points (${changes.risk_change_percent > 0 ? '+' : ''}${changes.risk_change_percent.toFixed(1)}%)
+        ${changes.priority_changed ? `\nPriority changed from ${changes.old_priority} to ${changes.new_priority}` : ''}
+        ${data.additional_notes ? `\nNotes: ${data.additional_notes}` : ''}
+    `;
+    
+    alert('✅ Re-evaluation Complete!\n\n' + changeMessage);
+    
+    // Clear additional notes
+    document.getElementById('additionalNotes').value = '';
+}
+
+// Load learnings and insights
+async function loadLearnings() {
+    try {
+        const response = await fetch(`${API_BASE}/api/learnings`);
+        const data = await response.json();
+        
+        if (data.insights && data.insights.length > 0) {
+            learningsSection.style.display = 'block';
+            displayLearnings(data.insights);
+        }
+    } catch (error) {
+        console.error('Failed to load learnings:', error);
+    }
+}
+
+// Display learnings
+function displayLearnings(insights) {
+    const insightsContainer = document.getElementById('insightsContainer');
+    insightsContainer.innerHTML = '';
+    
+    insights.forEach(insight => {
+        const insightItem = document.createElement('div');
+        insightItem.className = 'insight-item';
+        insightItem.textContent = insight;
+        insightsContainer.appendChild(insightItem);
+    });
+}

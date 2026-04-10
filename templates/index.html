@@ -55,6 +55,26 @@
                         <input type="number" id="population" min="0" placeholder="e.g., 50000" required>
                     </div>
 
+                    <div class="form-group">
+                        <label for="resources">Available Resources: <span id="resourcesValue">50</span>%</label>
+                        <input type="range" id="resources" min="0" max="100" value="50" required>
+                        <div class="range-labels">
+                            <span>None (0%)</span>
+                            <span>Full (100%)</span>
+                        </div>
+                        <small class="help-text">Emergency supplies, personnel, equipment availability</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="infrastructure">Infrastructure Quality: <span id="infrastructureValue">50</span>%</label>
+                        <input type="range" id="infrastructure" min="0" max="100" value="50" required>
+                        <div class="range-labels">
+                            <span>Collapsed (0%)</span>
+                            <span>Intact (100%)</span>
+                        </div>
+                        <small class="help-text">Roads, hospitals, communication systems condition</small>
+                    </div>
+
                     <button type="submit" class="btn-primary" id="simulateBtn">
                         Run Simulation
                     </button>
@@ -81,6 +101,38 @@
                 <div class="result-card recommendation-card">
                     <div class="result-label">Recommended Actions</div>
                     <div class="recommendation-text" id="recommendationText">--</div>
+                </div>
+
+                <div class="result-card reasoning-card">
+                    <div class="result-label">Risk Assessment Reasoning</div>
+                    <div class="reasoning-list" id="reasoningList"></div>
+                </div>
+
+                <!-- Re-evaluation Section -->
+                <div class="reevaluation-section" id="reevaluationSection">
+                    <h3>Update Situation</h3>
+                    <p class="help-text">Conditions changed? Re-evaluate with new information</p>
+                    
+                    <div class="form-group-inline">
+                        <div class="form-group">
+                            <label for="newResources">New Resources: <span id="newResourcesValue">50</span>%</label>
+                            <input type="range" id="newResources" min="0" max="100" value="50">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="newInfrastructure">New Infrastructure: <span id="newInfrastructureValue">50</span>%</label>
+                            <input type="range" id="newInfrastructure" min="0" max="100" value="50">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="additionalNotes">Additional Notes</label>
+                        <textarea id="additionalNotes" rows="2" placeholder="e.g., Emergency supplies arrived, roads cleared..."></textarea>
+                    </div>
+
+                    <button class="btn-secondary" id="reevaluateBtn">
+                        Re-evaluate Risk
+                    </button>
                 </div>
             </div>
 
@@ -113,8 +165,22 @@
                         <span class="detail-label">Population:</span>
                         <span class="detail-value" id="detailPopulation">--</span>
                     </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Resources:</span>
+                        <span class="detail-value" id="detailResources">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Infrastructure:</span>
+                        <span class="detail-value" id="detailInfrastructure">--</span>
+                    </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Learnings Section -->
+        <div class="learnings-section" id="learningsSection" style="display: none;">
+            <h2>System Learnings & Insights</h2>
+            <div class="insights-container" id="insightsContainer"></div>
         </div>
 
         <!-- History Section -->
