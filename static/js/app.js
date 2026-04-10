@@ -317,23 +317,28 @@ function displayReevaluationResults(data) {
     const updated = data.updated_assessment;
     const changes = data.changes;
     
-    // Update current simulation
+    // Update current simulation to the new assessment
     currentSimulation = updated;
     
     // Display updated results
     displayResults(updated);
     
-    // Show change notification
-    const changeMessage = `
-        Risk changed by ${changes.risk_change > 0 ? '+' : ''}${changes.risk_change.toFixed(1)} points (${changes.risk_change_percent > 0 ? '+' : ''}${changes.risk_change_percent.toFixed(1)}%)
-        ${changes.priority_changed ? `\nPriority changed from ${changes.old_priority} to ${changes.new_priority}` : ''}
-        ${data.additional_notes ? `\nNotes: ${data.additional_notes}` : ''}
-    `;
+    // Show change notification with better formatting
+    let changeMessage = `Risk changed by ${changes.risk_change > 0 ? '+' : ''}${changes.risk_change.toFixed(1)} points (${changes.risk_change_percent > 0 ? '+' : ''}${changes.risk_change_percent.toFixed(1)}%)`;
     
-    alert('✅ Re-evaluation Complete!\n\n' + changeMessage);
+    if (changes.priority_changed) {
+        changeMessage += `\nPriority: ${changes.old_priority} → ${changes.new_priority}`;
+    }
     
-    // Clear additional notes
-    document.getElementById('additionalNotes').value = '';
+    if (data.additional_notes) {
+        changeMessage += `\n\nNotes: ${data.additional_notes}`;
+    }
+    
+    // Show notification
+    showNotification('Re-evaluation Complete', changeMessage, changes.risk_change < 0 ? 'success' : 'warning');
+    
+    // Don't clear notes - keep them for reference
+    // document.getElementById('additionalNotes').value = '';
 }
 
 // Load learnings and insights
@@ -362,4 +367,35 @@ function displayLearnings(insights) {
         insightItem.textContent = insight;
         insightsContainer.appendChild(insightItem);
     });
+}
+
+
+// Show notification
+function showNotification(title, message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-header">
+            <strong>${title}</strong>
+            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
+        </div>
+        <div class="notification-body">${message.replace(/\n/g, '<br>')}</div>
+    `;
+    
+    // Add to page
+    let container = document.getElementById('notificationContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notificationContainer';
+        document.body.appendChild(container);
+    }
+    
+    container.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    }, 5000);
 }
