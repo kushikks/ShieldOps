@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShieldOps - Disaster Response Intelligence</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🛡️ ShieldOps</h1>
+                <p class="subtitle">Disaster Response Simulation & Decision Intelligence</p>
+            </div>
+            <div class="status-indicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Checking...</span>
+            </div>
+        </header>
+
+        <!-- Main Dashboard -->
+        <div class="dashboard">
+            <!-- Input Panel -->
+            <div class="panel input-panel">
+                <h2>Simulation Input</h2>
+                <form id="simulationForm">
+                    <div class="form-group">
+                        <label for="disasterType">Disaster Type</label>
+                        <select id="disasterType" required>
+                            <option value="">Select disaster type...</option>
+                            <option value="flood">🌊 Flood</option>
+                            <option value="earthquake">🏚️ Earthquake</option>
+                            <option value="fire">🔥 Fire</option>
+                            <option value="cyclone">🌀 Cyclone</option>
+                            <option value="tsunami">🌊 Tsunami</option>
+                            <option value="landslide">⛰️ Landslide</option>
+                            <option value="drought">☀️ Drought</option>
+                            <option value="epidemic">🦠 Epidemic</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="severity">Severity Level: <span id="severityValue">5</span></label>
+                        <input type="range" id="severity" min="1" max="10" value="5" required>
+                        <div class="range-labels">
+                            <span>Low (1)</span>
+                            <span>High (10)</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="population">Affected Population</label>
+                        <input type="number" id="population" min="0" placeholder="e.g., 50000" required>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="simulateBtn">
+                        Run Simulation
+                    </button>
+                </form>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="panel results-panel" id="resultsPanel" style="display: none;">
+                <h2>Simulation Results</h2>
+                
+                <div class="result-card risk-card">
+                    <div class="result-label">Risk Score</div>
+                    <div class="result-value" id="riskScore">--</div>
+                    <div class="risk-meter">
+                        <div class="risk-meter-fill" id="riskMeterFill"></div>
+                    </div>
+                </div>
+
+                <div class="result-card priority-card">
+                    <div class="result-label">Priority Level</div>
+                    <div class="priority-badge" id="priorityBadge">--</div>
+                </div>
+
+                <div class="result-card recommendation-card">
+                    <div class="result-label">Recommended Actions</div>
+                    <div class="recommendation-text" id="recommendationText">--</div>
+                </div>
+            </div>
+
+            <!-- Insights Panel -->
+            <div class="panel insights-panel" id="insightsPanel" style="display: none;">
+                <h2>Visual Insights</h2>
+                
+                <div class="insight-card">
+                    <h3>Risk Assessment</h3>
+                    <div class="gauge-container">
+                        <svg class="gauge" viewBox="0 0 200 120">
+                            <path class="gauge-bg" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#e0e0e0" stroke-width="20"/>
+                            <path class="gauge-fill" id="gaugeFill" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#4CAF50" stroke-width="20" stroke-dasharray="251.2" stroke-dashoffset="251.2"/>
+                            <text x="100" y="90" text-anchor="middle" class="gauge-text" id="gaugeText">0%</text>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="insight-card">
+                    <h3>Disaster Details</h3>
+                    <div class="detail-item">
+                        <span class="detail-label">Type:</span>
+                        <span class="detail-value" id="detailType">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Severity:</span>
+                        <span class="detail-value" id="detailSeverity">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Population:</span>
+                        <span class="detail-value" id="detailPopulation">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <div class="history-section" id="historySection" style="display: none;">
+            <h2>Simulation History</h2>
+            <div class="history-list" id="historyList"></div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

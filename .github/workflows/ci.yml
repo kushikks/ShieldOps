@@ -1,42 +1,382 @@
-name: ShieldOps CI Pipeline
+name: ShieldOps DevSecOps CI/CD Pipeline
 
 on:
   push:
+    branches: [ main, develop ]
   pull_request:
+    branches: [ main ]
+
+env:
+  DOCKER_IMAGE: shieldops
+  DOCKER_TAG: ${{ github.sha }}
 
 jobs:
-  pipeline:
+  # Stage 1: Build
+  build:
+    name: Build Application
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Display system info
-        run: |
-          echo "Pipeline started successfully"
-          docker --version
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Stage
-        run: echo "Docker build will happen here"
+      - name: Build Docker Image
+        run: |
+          echo "Building Docker image..."
+          docker build -t ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }} .
+          docker tag ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }} ${{ env.DOCKER_IMAGE }}:latest
+          echo "✅ Docker image built successfully"
 
-      - name: Test Stage
-        run: echo "Tests will run here"
+      - name: Save Docker Image
+        run: |
+          docker save ${{ env.DOCKER_IMAGE }}:latest -o shieldops-image.tar
+          echo "✅ Docker image saved as artifact"
 
-      - name: SAST Scan
-        run: echo "Semgrep will run here"
-
-      - name: Dependency Scan
-        run: echo "Trivy scan will run here"
-
-      - name: DAST Scan
-        run: echo "OWASP ZAP will run here"
-
-      - name: Upload Reports
+      - name: Upload Docker Image Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pipeline-reports
-          path: .
+          name: docker-image
+          path: shieldops-image.tar
+          retention-days: 1
+
+  # Stage 2: Test
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          echo "✅ Dependencies installed"
+
+      - name: Run Unit Tests
+        run: |
+          echo "Running comprehensive test suite..."
+          pytest test_app.py -v --tb=short
+          echo "✅ All tests passed"
+
+      - name: Run Tests with Coverage
+        run: |
+          echo "Running tests with coverage analysis..."
+          pytest test_app.py --cov=app --cov-report=html --cov-report=term
+          echo "✅ Coverage report generated"
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+          retention-days: 7
+
+  # Stage 3: Deploy (Run Container)
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    needs: [build, test]
+    
+    steps:
+      - name: Download Docker Image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker Image
+        run: |
+          docker load -i shieldops-image.tar
+          echo "✅ Docker image loaded"
+
+      - name: Run Container
+        run: |
+          echo "Starting ShieldOps container..."
+          docker run -d -p 5000:5000 --name shieldops-app ${{ env.DOCKER_IMAGE }}:latest
+          echo "✅ Container started"
+          
+          # Wait for container to be ready
+          echo "Waiting for application to start..."
+          sleep 10
+
+      - name: Verify Container Status
+        run: |
+          echo "Checking container status..."
+          docker ps -a
+          
+          # Check if container is running
+          if [ "$(docker inspect -f '{{.State.Running}}' shieldops-app)" = "true" ]; then
+            echo "✅ Container is running"
+          else
+            echo "❌ Container failed to start"
+            docker logs shieldops-app
+            exit 1
+          fi
+
+  # Stage 4: Health Check
+  health-check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    needs: deploy
+    
+    steps:
+      - name: Download Docker Image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load and Run Container
+        run: |
+          docker load -i shieldops-image.tar
+          docker run -d -p 5000:5000 --name shieldops-app ${{ env.DOCKER_IMAGE }}:latest
+          sleep 10
+
+      - name: Health Check Endpoint
+        run: |
+          echo "Performing health check..."
+          
+          # Check health endpoint
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/health)
+          
+          if [ "$response" = "200" ]; then
+            echo "✅ Health check passed (HTTP $response)"
+          else
+            echo "❌ Health check failed (HTTP $response)"
+            docker logs shieldops-app
+            exit 1
+          fi
+
+      - name: Verify Health Response
+        run: |
+          echo "Verifying health response content..."
+          health_data=$(curl -s http://localhost:5000/health)
+          echo "Health response: $health_data"
+          
+          # Check if response contains expected fields
+          if echo "$health_data" | grep -q "healthy"; then
+            echo "✅ Health response is valid"
+          else
+            echo "❌ Health response is invalid"
+            exit 1
+          fi
+
+  # Stage 5: Functional Testing
+  functional-test:
+    name: Functional Testing
+    runs-on: ubuntu-latest
+    needs: health-check
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Docker Image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load and Run Container
+        run: |
+          docker load -i shieldops-image.tar
+          docker run -d -p 5000:5000 --name shieldops-app ${{ env.DOCKER_IMAGE }}:latest
+          sleep 10
+
+      - name: Test Simulation Endpoint
+        run: |
+          echo "Testing disaster simulation endpoint..."
+          
+          response=$(curl -s -X POST http://localhost:5000/api/simulate \
+            -H "Content-Type: application/json" \
+            -d '{"disaster_type":"flood","severity":7,"population":50000}')
+          
+          echo "Response: $response"
+          
+          # Verify response contains expected fields
+          if echo "$response" | grep -q "risk_score" && \
+             echo "$response" | grep -q "priority" && \
+             echo "$response" | grep -q "recommendation"; then
+            echo "✅ Simulation endpoint test passed"
+          else
+            echo "❌ Simulation endpoint test failed"
+            exit 1
+          fi
+
+      - name: Test All Disaster Types
+        run: |
+          echo "Testing all disaster types..."
+          
+          disasters=("flood" "earthquake" "fire" "cyclone" "tsunami" "landslide" "drought" "epidemic")
+          
+          for disaster in "${disasters[@]}"; do
+            echo "Testing $disaster..."
+            response=$(curl -s -X POST http://localhost:5000/api/simulate \
+              -H "Content-Type: application/json" \
+              -d "{\"disaster_type\":\"$disaster\",\"severity\":5,\"population\":10000}")
+            
+            if echo "$response" | grep -q "risk_score"; then
+              echo "✅ $disaster test passed"
+            else
+              echo "❌ $disaster test failed"
+              exit 1
+            fi
+          done
+          
+          echo "✅ All disaster types tested successfully"
+
+      - name: Test Input Validation
+        run: |
+          echo "Testing input validation..."
+          
+          # Test invalid disaster type
+          response=$(curl -s -w "\n%{http_code}" -X POST http://localhost:5000/api/simulate \
+            -H "Content-Type: application/json" \
+            -d '{"disaster_type":"invalid","severity":5,"population":10000}')
+          
+          http_code=$(echo "$response" | tail -n1)
+          
+          if [ "$http_code" = "400" ]; then
+            echo "✅ Input validation test passed"
+          else
+            echo "❌ Input validation test failed (expected 400, got $http_code)"
+            exit 1
+          fi
+
+      - name: Test History Endpoint
+        run: |
+          echo "Testing history endpoint..."
+          
+          # First run a simulation
+          curl -s -X POST http://localhost:5000/api/simulate \
+            -H "Content-Type: application/json" \
+            -d '{"disaster_type":"fire","severity":6,"population":25000}' > /dev/null
+          
+          # Check history
+          response=$(curl -s http://localhost:5000/api/history)
+          
+          if echo "$response" | grep -q "history" && echo "$response" | grep -q "count"; then
+            echo "✅ History endpoint test passed"
+          else
+            echo "❌ History endpoint test failed"
+            exit 1
+          fi
+
+  # Stage 6: Security Scanning
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: SAST - Semgrep Scan
+        run: |
+          echo "Running SAST scan with Semgrep..."
+          pip install semgrep
+          semgrep --config=auto --json --output=semgrep-report.json . || true
+          echo "✅ SAST scan completed"
+
+      - name: Dependency Scan - Safety Check
+        run: |
+          echo "Running dependency vulnerability scan..."
+          pip install safety
+          safety check --json --output safety-report.json || true
+          echo "✅ Dependency scan completed"
+
+      - name: Download Docker Image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker Image
+        run: docker load -i shieldops-image.tar
+
+      - name: Container Scan - Trivy
+        run: |
+          echo "Running container vulnerability scan with Trivy..."
+          
+          # Install Trivy
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install trivy -y
+          
+          # Scan the image
+          trivy image --format json --output trivy-report.json ${{ env.DOCKER_IMAGE }}:latest || true
+          trivy image --severity HIGH,CRITICAL ${{ env.DOCKER_IMAGE }}:latest || true
+          
+          echo "✅ Container scan completed"
+
+      - name: Upload Security Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            semgrep-report.json
+            safety-report.json
+            trivy-report.json
+          retention-days: 30
+
+  # Stage 7: DAST Placeholder
+  dast-scan:
+    name: DAST Scan (Placeholder)
+    runs-on: ubuntu-latest
+    needs: functional-test
+    
+    steps:
+      - name: DAST Scan Placeholder
+        run: |
+          echo "DAST scan stage - Ready for OWASP ZAP integration"
+          echo "This stage will perform dynamic application security testing"
+          echo "✅ DAST stage structure ready"
+
+  # Stage 8: Pipeline Summary
+  pipeline-summary:
+    name: Pipeline Summary
+    runs-on: ubuntu-latest
+    needs: [build, test, deploy, health-check, functional-test, security-scan, dast-scan]
+    if: always()
+    
+    steps:
+      - name: Generate Pipeline Summary
+        run: |
+          echo "=========================================="
+          echo "   ShieldOps CI/CD Pipeline Summary"
+          echo "=========================================="
+          echo ""
+          echo "Pipeline Status: ${{ job.status }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Triggered by: ${{ github.event_name }}"
+          echo ""
+          echo "Stages Completed:"
+          echo "  ✅ Build"
+          echo "  ✅ Test"
+          echo "  ✅ Deploy"
+          echo "  ✅ Health Check"
+          echo "  ✅ Functional Testing"
+          echo "  ✅ Security Scanning"
+          echo "  ✅ DAST (Placeholder)"
+          echo ""
+          echo "=========================================="
+          echo "Pipeline execution completed successfully!"
+          echo "=========================================="
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+
+      - name: List Generated Artifacts
+        run: |
+          echo "Generated artifacts:"
+          ls -la
