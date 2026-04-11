@@ -11,12 +11,30 @@
         <!-- Header -->
         <header class="header">
             <div class="header-content">
-                <h1>🛡️ ShieldOps</h1>
-                <p class="subtitle">Disaster Response Simulation & Decision Intelligence</p>
+                <h1>ShieldOps</h1>
+                <p class="subtitle">Disaster Response Intelligence System</p>
             </div>
-            <div class="status-indicator">
-                <span class="status-dot" id="statusDot"></span>
-                <span id="statusText">Checking...</span>
+            <div class="header-actions">
+                <div class="status-indicator">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText">Checking...</span>
+                </div>
+                <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
+                    <svg class="theme-icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="theme-icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
             </div>
         </header>
 
@@ -24,20 +42,20 @@
         <div class="dashboard">
             <!-- Input Panel -->
             <div class="panel input-panel">
-                <h2>Simulation Input</h2>
+                <h2>Simulation Parameters</h2>
                 <form id="simulationForm">
                     <div class="form-group">
                         <label for="disasterType">Disaster Type</label>
                         <select id="disasterType" required>
                             <option value="">Select disaster type...</option>
-                            <option value="flood">🌊 Flood</option>
-                            <option value="earthquake">🏚️ Earthquake</option>
-                            <option value="fire">🔥 Fire</option>
-                            <option value="cyclone">🌀 Cyclone</option>
-                            <option value="tsunami">🌊 Tsunami</option>
-                            <option value="landslide">⛰️ Landslide</option>
-                            <option value="drought">☀️ Drought</option>
-                            <option value="epidemic">🦠 Epidemic</option>
+                            <option value="flood">Flood</option>
+                            <option value="earthquake">Earthquake</option>
+                            <option value="fire">Fire</option>
+                            <option value="cyclone">Cyclone</option>
+                            <option value="tsunami">Tsunami</option>
+                            <option value="landslide">Landslide</option>
+                            <option value="drought">Drought</option>
+                            <option value="epidemic">Epidemic</option>
                         </select>
                     </div>
 
@@ -45,8 +63,8 @@
                         <label for="severity">Severity Level: <span id="severityValue">5</span></label>
                         <input type="range" id="severity" min="1" max="10" value="5" required>
                         <div class="range-labels">
-                            <span>Low (1)</span>
-                            <span>High (10)</span>
+                            <span>Low</span>
+                            <span>High</span>
                         </div>
                     </div>
 
@@ -59,20 +77,18 @@
                         <label for="resources">Available Resources: <span id="resourcesValue">50</span>%</label>
                         <input type="range" id="resources" min="0" max="100" value="50" required>
                         <div class="range-labels">
-                            <span>None (0%)</span>
-                            <span>Full (100%)</span>
+                            <span>None</span>
+                            <span>Full</span>
                         </div>
-                        <small class="help-text">Emergency supplies, personnel, equipment availability</small>
                     </div>
 
                     <div class="form-group">
                         <label for="infrastructure">Infrastructure Quality: <span id="infrastructureValue">50</span>%</label>
                         <input type="range" id="infrastructure" min="0" max="100" value="50" required>
                         <div class="range-labels">
-                            <span>Collapsed (0%)</span>
-                            <span>Intact (100%)</span>
+                            <span>Collapsed</span>
+                            <span>Intact</span>
                         </div>
-                        <small class="help-text">Roads, hospitals, communication systems condition</small>
                     </div>
 
                     <button type="submit" class="btn-primary" id="simulateBtn">
@@ -83,7 +99,7 @@
 
             <!-- Results Panel -->
             <div class="panel results-panel" id="resultsPanel" style="display: none;">
-                <h2>Simulation Results</h2>
+                <h2>Assessment Results</h2>
                 
                 <div class="result-card risk-card">
                     <div class="result-label">Risk Score</div>
@@ -104,29 +120,29 @@
                 </div>
 
                 <div class="result-card reasoning-card">
-                    <div class="result-label">Risk Assessment Reasoning</div>
+                    <div class="result-label">Risk Assessment Breakdown</div>
                     <div class="reasoning-list" id="reasoningList"></div>
                 </div>
 
                 <!-- Re-evaluation Section -->
                 <div class="reevaluation-section" id="reevaluationSection">
-                    <h3>Update Situation</h3>
-                    <p class="help-text">Conditions changed? Re-evaluate with new information</p>
+                    <h3>Update Assessment</h3>
+                    <p class="section-description">Conditions changed? Re-evaluate with updated information</p>
                     
                     <div class="form-group-inline">
                         <div class="form-group">
-                            <label for="newResources">New Resources: <span id="newResourcesValue">50</span>%</label>
+                            <label for="newResources">Resources: <span id="newResourcesValue">50</span>%</label>
                             <input type="range" id="newResources" min="0" max="100" value="50">
                         </div>
                         
                         <div class="form-group">
-                            <label for="newInfrastructure">New Infrastructure: <span id="newInfrastructureValue">50</span>%</label>
+                            <label for="newInfrastructure">Infrastructure: <span id="newInfrastructureValue">50</span>%</label>
                             <input type="range" id="newInfrastructure" min="0" max="100" value="50">
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label for="additionalNotes">Additional Notes</label>
+                        <label for="additionalNotes">Additional Context</label>
                         <textarea id="additionalNotes" rows="2" placeholder="e.g., Emergency supplies arrived, roads cleared..."></textarea>
                     </div>
 
@@ -138,10 +154,10 @@
 
             <!-- Insights Panel -->
             <div class="panel insights-panel" id="insightsPanel" style="display: none;">
-                <h2>Visual Insights</h2>
+                <h2>Analysis</h2>
                 
                 <div class="insight-card">
-                    <h3>Risk Assessment</h3>
+                    <h3>Risk Gauge</h3>
                     <div class="gauge-container">
                         <svg class="gauge" viewBox="0 0 200 120">
                             <path class="gauge-bg" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#e0e0e0" stroke-width="20"/>
@@ -152,41 +168,41 @@
                 </div>
 
                 <div class="insight-card">
-                    <h3>Disaster Details</h3>
+                    <h3>Situation Details</h3>
                     <div class="detail-item">
-                        <span class="detail-label">Type:</span>
+                        <span class="detail-label">Type</span>
                         <span class="detail-value" id="detailType">--</span>
                     </div>
                     <div class="detail-item">
-                        <span class="detail-label">Severity:</span>
+                        <span class="detail-label">Severity</span>
                         <span class="detail-value" id="detailSeverity">--</span>
                     </div>
                     <div class="detail-item">
-                        <span class="detail-label">Population:</span>
+                        <span class="detail-label">Population</span>
                         <span class="detail-value" id="detailPopulation">--</span>
                     </div>
                     <div class="detail-item">
-                        <span class="detail-label">Resources:</span>
+                        <span class="detail-label">Resources</span>
                         <span class="detail-value" id="detailResources">--</span>
                     </div>
                     <div class="detail-item">
-                        <span class="detail-label">Infrastructure:</span>
+                        <span class="detail-label">Infrastructure</span>
                         <span class="detail-value" id="detailInfrastructure">--</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Learnings Section -->
-        <div class="learnings-section" id="learningsSection" style="display: none;">
-            <h2>System Learnings & Insights</h2>
-            <div class="insights-container" id="insightsContainer"></div>
-        </div>
-
         <!-- History Section -->
         <div class="history-section" id="historySection" style="display: none;">
             <h2>Simulation History</h2>
             <div class="history-list" id="historyList"></div>
+        </div>
+
+        <!-- Learnings Section -->
+        <div class="learnings-section" id="learningsSection" style="display: none;">
+            <h2>System Insights</h2>
+            <div class="insights-container" id="insightsContainer"></div>
         </div>
     </div>
 

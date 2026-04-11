@@ -98,25 +98,25 @@ def enhance_recommendation(base_recommendation, resources, infrastructure, prior
     
     # Resource-based enhancements
     if resources < 30:
-        enhanced += " | ⚠️ CRITICAL: Immediate external aid required due to low resource availability."
+        enhanced += " | CRITICAL: Immediate external aid required due to low resource availability."
     elif resources < 50:
-        enhanced += " | ⚠️ WARNING: Request additional resources from neighboring regions."
+        enhanced += " | WARNING: Request additional resources from neighboring regions."
     elif resources > 70:
-        enhanced += " | ✅ GOOD: Adequate resources available for effective response."
+        enhanced += " | GOOD: Adequate resources available for effective response."
     
     # Infrastructure-based enhancements
     if infrastructure < 30:
-        enhanced += " | 🏗️ CRITICAL: Infrastructure severely compromised, prioritize structural assessments and alternative routes."
+        enhanced += " | CRITICAL: Infrastructure severely compromised, prioritize structural assessments and alternative routes."
     elif infrastructure < 50:
-        enhanced += " | 🏗️ CAUTION: Monitor infrastructure stability closely, prepare backup systems."
+        enhanced += " | CAUTION: Monitor infrastructure stability closely, prepare backup systems."
     elif infrastructure > 70:
-        enhanced += " | 🏗️ GOOD: Infrastructure intact, enables efficient emergency operations."
+        enhanced += " | GOOD: Infrastructure intact, enables efficient emergency operations."
     
     # Priority and resource combination
     if priority == 'HIGH' and resources > 70 and infrastructure > 70:
-        enhanced += " | ✅ ADVANTAGE: Strong resources and infrastructure enable rapid response despite high severity."
+        enhanced += " | ADVANTAGE: Strong resources and infrastructure enable rapid response despite high severity."
     elif priority == 'HIGH' and (resources < 40 or infrastructure < 40):
-        enhanced += " | 🚨 URGENT: High priority with limited capacity - escalate to national/international level immediately."
+        enhanced += " | URGENT: High priority with limited capacity - escalate to national/international level immediately."
     
     # Context-based enhancements from additional notes
     if additional_context:
@@ -124,15 +124,15 @@ def enhance_recommendation(base_recommendation, resources, infrastructure, prior
         
         # Positive developments
         if any(word in context_lower for word in ['arrived', 'deployed', 'improved', 'cleared', 'restored', 'reinforced']):
-            enhanced += f" | 📈 UPDATE: {additional_context} - Continue monitoring and optimize resource deployment."
+            enhanced += f" | UPDATE: {additional_context} - Continue monitoring and optimize resource deployment."
         
         # Negative developments
         elif any(word in context_lower for word in ['worsened', 'collapsed', 'blocked', 'damaged', 'failed', 'deteriorated']):
-            enhanced += f" | 📉 ALERT: {additional_context} - Adjust response strategy immediately."
+            enhanced += f" | ALERT: {additional_context} - Adjust response strategy immediately."
         
         # Neutral updates
         else:
-            enhanced += f" | 📝 NOTE: {additional_context}"
+            enhanced += f" | NOTE: {additional_context}"
     
     return enhanced
 
@@ -328,7 +328,7 @@ def reevaluate_disaster():
                 'priority': new_priority,
                 'recommendation': new_recommendation,
                 'reasoning': new_reasoning,
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.utcnow().isoformat()  # NEW timestamp for this assessment
             },
             'changes': {
                 'risk_change': round(risk_change, 2),
@@ -342,6 +342,12 @@ def reevaluate_disaster():
             'additional_notes': additional_notes,
             'learning_recorded': True
         }
+        
+        # IMPORTANT: Add the updated assessment to history so it can be re-evaluated again
+        updated_sim = response['updated_assessment'].copy()
+        simulation_history.append(updated_sim)
+        if len(simulation_history) > 20:
+            simulation_history.pop(0)
         
         return jsonify(response), 200
         

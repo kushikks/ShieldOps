@@ -257,6 +257,22 @@ document.addEventListener('DOMContentLoaded', () => {
     loadHistory();
     loadLearnings();
     
+    // Load theme preference
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-theme');
+    }
+    
+    // Theme toggle
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-theme');
+            const isDark = document.body.classList.contains('dark-theme');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+    }
+    
     // Refresh health check every 30 seconds
     setInterval(checkHealth, 30000);
 });
@@ -317,8 +333,12 @@ function displayReevaluationResults(data) {
     const updated = data.updated_assessment;
     const changes = data.changes;
     
-    // Update current simulation to the new assessment
-    currentSimulation = updated;
+    // CRITICAL: Update current simulation with the NEW timestamp from updated assessment
+    // This allows unlimited re-evaluations
+    currentSimulation = {
+        ...updated,
+        timestamp: updated.timestamp  // Use the new timestamp
+    };
     
     // Display updated results
     displayResults(updated);
@@ -336,9 +356,6 @@ function displayReevaluationResults(data) {
     
     // Show notification
     showNotification('Re-evaluation Complete', changeMessage, changes.risk_change < 0 ? 'success' : 'warning');
-    
-    // Don't clear notes - keep them for reference
-    // document.getElementById('additionalNotes').value = '';
 }
 
 // Load learnings and insights

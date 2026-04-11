@@ -386,6 +386,86 @@ class TestReevaluation:
                               content_type='application/json')
         
         assert response.status_code == 404
+    
+    def test_multiple_reevaluations(self, client):
+        """Test that a simulation can be re-evaluated multiple times"""
+        # Initial simulation
+        payload = {
+            'disaster_type': 'flood',
+            'severity': 8,
+            'population': 100000,
+            'resources_available': 30,
+            'infrastructure_quality': 30
+        }
+        
+        response = client.post('/api/simulate',
+                              data=json.dumps(payload),
+                              content_type='application/json')
+        initial_data = json.loads(response.data)
+        initial_risk = initial_data['risk_score']
+        
+        # First re-evaluation
+        reevaluate1 = {
+            'original_timestamp': initial_data['timestamp'],
+            'new_findings': {
+                'resources_available': 50,
+                'infrastructure_quality': 50,
+                'additional_notes': 'First wave of supplies arrived'
+            }
+        }
+        
+        response = client.post('/api/reevaluate',
+                              data=json.dumps(reevaluate1),
+                              content_type='application/json')
+        
+        assert response.status_code == 200
+        data1 = json.loads(response.data)
+        updated1 = data1['updated_assessment']
+        
+        # Second re-evaluation using the updated timestamp
+        reevaluate2 = {
+            'original_timestamp': updated1['timestamp'],
+            'new_findings': {
+                'resources_available': 70,
+                'infrastructure_quality': 70,
+                'additional_notes': 'Additional reinforcements deployed'
+            }
+        }
+        
+        response = client.post('/api/reevaluate',
+                              data=json.dumps(reevaluate2),
+                              content_type='application/json')
+        
+        assert response.status_code == 200
+        data2 = json.loads(response.data)
+        updated2 = data2['updated_assessment']
+        
+        # Third re-evaluation
+        reevaluate3 = {
+            'original_timestamp': updated2['timestamp'],
+            'new_findings': {
+                'resources_available': 90,
+                'infrastructure_quality': 80,
+                'additional_notes': 'Situation fully stabilized'
+            }
+        }
+        
+        response = client.post('/api/reevaluate',
+                              data=json.dumps(reevaluate3),
+                              content_type='application/json')
+        
+        assert response.status_code == 200
+        data3 = json.loads(response.data)
+        updated3 = data3['updated_assessment']
+        
+        # Verify risk decreased with each re-evaluation
+        assert updated1['risk_score'] < initial_risk
+        assert updated2['risk_score'] < updated1['risk_score']
+        assert updated3['risk_score'] < updated2['risk_score']
+        
+        # Verify recommendations include the additional notes context
+        assert 'arrived' in updated1['recommendation'].lower() or 'supplies' in updated1['recommendation'].lower()
+        assert 'deployed' in updated2['recommendation'].lower() or 'reinforcements' in updated2['recommendation'].lower()
 
 
 class TestLearnings:
