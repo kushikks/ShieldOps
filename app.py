@@ -93,46 +93,122 @@ def determine_priority(risk_score):
 def enhance_recommendation(base_recommendation, resources, infrastructure, priority, additional_context=""):
     """
     Enhance recommendation based on available resources, infrastructure, and context
+    Intelligently parses additional context to provide specific actionable recommendations
     """
     enhanced = base_recommendation
+    recommendations = []
     
     # Resource-based enhancements
     if resources < 30:
-        enhanced += " | CRITICAL: Immediate external aid required due to low resource availability."
+        recommendations.append("CRITICAL: Immediate external aid required due to low resource availability.")
     elif resources < 50:
-        enhanced += " | WARNING: Request additional resources from neighboring regions."
+        recommendations.append("WARNING: Request additional resources from neighboring regions.")
     elif resources > 70:
-        enhanced += " | GOOD: Adequate resources available for effective response."
+        recommendations.append("GOOD: Adequate resources available for effective response.")
     
     # Infrastructure-based enhancements
     if infrastructure < 30:
-        enhanced += " | CRITICAL: Infrastructure severely compromised, prioritize structural assessments and alternative routes."
+        recommendations.append("CRITICAL: Infrastructure severely compromised, prioritize structural assessments and alternative routes.")
     elif infrastructure < 50:
-        enhanced += " | CAUTION: Monitor infrastructure stability closely, prepare backup systems."
+        recommendations.append("CAUTION: Monitor infrastructure stability closely, prepare backup systems.")
     elif infrastructure > 70:
-        enhanced += " | GOOD: Infrastructure intact, enables efficient emergency operations."
+        recommendations.append("GOOD: Infrastructure intact, enables efficient emergency operations.")
     
     # Priority and resource combination
     if priority == 'HIGH' and resources > 70 and infrastructure > 70:
-        enhanced += " | ADVANTAGE: Strong resources and infrastructure enable rapid response despite high severity."
+        recommendations.append("ADVANTAGE: Strong resources and infrastructure enable rapid response despite high severity.")
     elif priority == 'HIGH' and (resources < 40 or infrastructure < 40):
-        enhanced += " | URGENT: High priority with limited capacity - escalate to national/international level immediately."
+        recommendations.append("URGENT: High priority with limited capacity - escalate to national/international level immediately.")
     
-    # Context-based enhancements from additional notes
+    # Intelligent context parsing and specific recommendations
     if additional_context:
         context_lower = additional_context.lower()
         
-        # Positive developments
-        if any(word in context_lower for word in ['arrived', 'deployed', 'improved', 'cleared', 'restored', 'reinforced']):
-            enhanced += f" | UPDATE: {additional_context} - Continue monitoring and optimize resource deployment."
+        # Medical/Healthcare related
+        if any(word in context_lower for word in ['doctor', 'doctors', 'medical', 'hospital', 'healthcare', 'physician', 'nurse', 'paramedic']):
+            if any(word in context_lower for word in ['no', 'not', 'unavailable', 'shortage', 'lacking', 'insufficient', 'limited']):
+                recommendations.append("MEDICAL CRISIS: Deploy mobile medical units immediately. Request medical personnel from neighboring regions. Establish triage centers with available staff. Coordinate with military medical corps.")
+            elif any(word in context_lower for word in ['arrived', 'available', 'deployed', 'present']):
+                recommendations.append("MEDICAL SUPPORT: Optimize medical resource distribution. Establish treatment protocols. Set up field hospitals in strategic locations.")
         
-        # Negative developments
-        elif any(word in context_lower for word in ['worsened', 'collapsed', 'blocked', 'damaged', 'failed', 'deteriorated']):
-            enhanced += f" | ALERT: {additional_context} - Adjust response strategy immediately."
+        # Food/Water related
+        elif any(word in context_lower for word in ['food', 'water', 'supplies', 'rations', 'drinking', 'nutrition']):
+            if any(word in context_lower for word in ['no', 'not', 'unavailable', 'shortage', 'lacking', 'insufficient', 'contaminated']):
+                recommendations.append("SUPPLY EMERGENCY: Activate emergency food/water distribution. Deploy water purification units. Coordinate with humanitarian organizations. Establish distribution centers.")
+            elif any(word in context_lower for word in ['arrived', 'available', 'sufficient']):
+                recommendations.append("SUPPLY MANAGEMENT: Organize systematic distribution. Monitor consumption rates. Prevent hoarding. Maintain supply chain.")
         
-        # Neutral updates
+        # Communication related
+        elif any(word in context_lower for word in ['communication', 'phone', 'network', 'internet', 'radio', 'signal']):
+            if any(word in context_lower for word in ['down', 'failed', 'no', 'not', 'unavailable', 'disrupted']):
+                recommendations.append("COMMUNICATION BREAKDOWN: Deploy satellite phones. Establish radio communication network. Use runners for critical messages. Set up information centers at key locations.")
+            elif any(word in context_lower for word in ['restored', 'working', 'operational']):
+                recommendations.append("COMMUNICATION ACTIVE: Broadcast emergency information. Coordinate response teams via established channels. Maintain communication logs.")
+        
+        # Transportation/Roads related
+        elif any(word in context_lower for word in ['road', 'roads', 'transport', 'vehicle', 'access', 'route']):
+            if any(word in context_lower for word in ['blocked', 'collapsed', 'damaged', 'impassable', 'destroyed']):
+                recommendations.append("ACCESS RESTRICTED: Deploy helicopters for critical transport. Clear priority routes immediately. Establish alternative access points. Use boats/amphibious vehicles if applicable.")
+            elif any(word in context_lower for word in ['cleared', 'open', 'accessible', 'restored']):
+                recommendations.append("ACCESS RESTORED: Prioritize evacuation routes. Transport critical supplies. Establish traffic control. Monitor route conditions.")
+        
+        # Shelter related
+        elif any(word in context_lower for word in ['shelter', 'housing', 'accommodation', 'homeless', 'displaced']):
+            if any(word in context_lower for word in ['no', 'not', 'insufficient', 'lacking', 'overcrowded']):
+                recommendations.append("SHELTER CRISIS: Establish emergency shelters immediately. Deploy tents and temporary structures. Coordinate with schools/community centers. Ensure basic amenities.")
+            elif any(word in context_lower for word in ['available', 'established', 'ready']):
+                recommendations.append("SHELTER AVAILABLE: Organize systematic allocation. Maintain hygiene standards. Provide security. Monitor capacity.")
+        
+        # Power/Electricity related
+        elif any(word in context_lower for word in ['power', 'electricity', 'generator', 'energy']):
+            if any(word in context_lower for word in ['no', 'not', 'outage', 'failed', 'down']):
+                recommendations.append("POWER OUTAGE: Deploy emergency generators for critical facilities. Prioritize hospitals and communication centers. Arrange fuel supply. Use solar/battery backup.")
+            elif any(word in context_lower for word in ['restored', 'working', 'available']):
+                recommendations.append("POWER RESTORED: Prioritize critical infrastructure. Monitor grid stability. Prepare backup systems.")
+        
+        # Personnel/Workforce related
+        elif any(word in context_lower for word in ['personnel', 'staff', 'workers', 'volunteers', 'team', 'manpower']):
+            if any(word in context_lower for word in ['no', 'not', 'shortage', 'insufficient', 'lacking']):
+                recommendations.append("PERSONNEL SHORTAGE: Request additional response teams. Mobilize volunteers. Coordinate with NGOs. Establish training for local volunteers. Prioritize critical roles.")
+            elif any(word in context_lower for word in ['arrived', 'available', 'deployed']):
+                recommendations.append("PERSONNEL DEPLOYED: Organize teams efficiently. Assign clear responsibilities. Establish shift rotations. Maintain coordination.")
+        
+        # Security related
+        elif any(word in context_lower for word in ['security', 'looting', 'crime', 'violence', 'safety']):
+            if any(word in context_lower for word in ['issue', 'problem', 'concern', 'threat']):
+                recommendations.append("SECURITY CONCERN: Deploy security forces. Establish curfew if necessary. Protect supply distribution points. Ensure responder safety. Coordinate with law enforcement.")
+            elif any(word in context_lower for word in ['stable', 'controlled', 'secure']):
+                recommendations.append("SECURITY MAINTAINED: Continue monitoring. Maintain visible presence. Protect critical infrastructure.")
+        
+        # Weather related
+        elif any(word in context_lower for word in ['weather', 'rain', 'storm', 'wind', 'forecast']):
+            if any(word in context_lower for word in ['worsening', 'deteriorating', 'incoming', 'approaching']):
+                recommendations.append("WEATHER ALERT: Accelerate evacuation if needed. Secure temporary structures. Prepare for secondary impacts. Monitor weather updates continuously.")
+            elif any(word in context_lower for word in ['improving', 'clearing', 'stable']):
+                recommendations.append("WEATHER IMPROVING: Proceed with outdoor operations. Assess damage safely. Plan recovery operations.")
+        
+        # Casualties/Injuries related
+        elif any(word in context_lower for word in ['casualties', 'injured', 'wounded', 'victims', 'deaths']):
+            if any(word in context_lower for word in ['many', 'numerous', 'high', 'increasing', 'rising']):
+                recommendations.append("MASS CASUALTY EVENT: Activate mass casualty protocols. Establish triage system. Request additional medical support. Set up morgue facilities. Coordinate with forensic teams.")
+            else:
+                recommendations.append("CASUALTY MANAGEMENT: Maintain medical records. Provide psychological support. Coordinate with families. Ensure proper care.")
+        
+        # General positive developments
+        elif any(word in context_lower for word in ['arrived', 'deployed', 'improved', 'cleared', 'restored', 'reinforced', 'operational']):
+            recommendations.append(f"SITUATION UPDATE: {additional_context} - Continue monitoring and optimize resource deployment based on improved conditions.")
+        
+        # General negative developments
+        elif any(word in context_lower for word in ['worsened', 'collapsed', 'blocked', 'damaged', 'failed', 'deteriorated', 'critical']):
+            recommendations.append(f"SITUATION ALERT: {additional_context} - Immediately adjust response strategy. Reassess priorities. Request additional support.")
+        
+        # Neutral/General context
         else:
-            enhanced += f" | NOTE: {additional_context}"
+            recommendations.append(f"CONTEXT NOTE: {additional_context} - Evaluate impact and adjust response accordingly.")
+    
+    # Combine all recommendations
+    if recommendations:
+        enhanced += " | " + " | ".join(recommendations)
     
     return enhanced
 

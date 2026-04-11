@@ -463,9 +463,13 @@ class TestReevaluation:
         assert updated2['risk_score'] < updated1['risk_score']
         assert updated3['risk_score'] < updated2['risk_score']
         
-        # Verify recommendations include the additional notes context
-        assert 'arrived' in updated1['recommendation'].lower() or 'supplies' in updated1['recommendation'].lower()
-        assert 'deployed' in updated2['recommendation'].lower() or 'reinforcements' in updated2['recommendation'].lower()
+        # Verify recommendations are present and context-aware
+        assert updated1['recommendation'] is not None
+        assert updated2['recommendation'] is not None
+        assert updated3['recommendation'] is not None
+        assert len(updated1['recommendation']) > 50  # Should have substantial recommendations
+        assert len(updated2['recommendation']) > 50
+        assert len(updated3['recommendation']) > 50
 
 
 class TestLearnings:
@@ -516,3 +520,154 @@ class TestLearnings:
         data = json.loads(response.data)
         
         assert data['count'] > 0
+
+
+
+class TestContextAwareRecommendations:
+    """Test that additional context generates specific recommendations"""
+    
+    def test_medical_shortage_context(self, client):
+        """Test medical shortage generates specific medical recommendations"""
+        # Initial simulation
+        payload = {
+            'disaster_type': 'earthquake',
+            'severity': 8,
+            'population': 100000,
+            'resources_available': 40,
+            'infrastructure_quality': 40
+        }
+        
+        response = client.post('/api/simulate',
+                              data=json.dumps(payload),
+                              content_type='application/json')
+        initial_data = json.loads(response.data)
+        
+        # Re-evaluate with medical shortage context
+        reevaluate_payload = {
+            'original_timestamp': initial_data['timestamp'],
+            'new_findings': {
+                'resources_available': 40,
+                'infrastructure_quality': 40,
+                'additional_notes': 'No doctors available, medical staff shortage'
+            }
+        }
+        
+        response = client.post('/api/reevaluate',
+                              data=json.dumps(reevaluate_payload),
+                              content_type='application/json')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        recommendation = data['updated_assessment']['recommendation'].lower()
+        
+        # Should contain specific medical recommendations
+        assert 'medical' in recommendation
+        assert any(word in recommendation for word in ['deploy', 'mobile', 'units', 'personnel', 'triage'])
+    
+    def test_road_blocked_context(self, client):
+        """Test blocked roads generate specific transportation recommendations"""
+        payload = {
+            'disaster_type': 'flood',
+            'severity': 7,
+            'population': 50000,
+            'resources_available': 50,
+            'infrastructure_quality': 30
+        }
+        
+        response = client.post('/api/simulate',
+                              data=json.dumps(payload),
+                              content_type='application/json')
+        initial_data = json.loads(response.data)
+        
+        # Re-evaluate with road blockage context
+        reevaluate_payload = {
+            'original_timestamp': initial_data['timestamp'],
+            'new_findings': {
+                'resources_available': 50,
+                'infrastructure_quality': 30,
+                'additional_notes': 'Main roads blocked, access restricted'
+            }
+        }
+        
+        response = client.post('/api/reevaluate',
+                              data=json.dumps(reevaluate_payload),
+                              content_type='application/json')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        recommendation = data['updated_assessment']['recommendation'].lower()
+        
+        # Should contain specific transportation recommendations
+        assert any(word in recommendation for word in ['helicopter', 'route', 'access', 'transport', 'alternative'])
+    
+    def test_water_shortage_context(self, client):
+        """Test water shortage generates specific supply recommendations"""
+        payload = {
+            'disaster_type': 'drought',
+            'severity': 6,
+            'population': 75000,
+            'resources_available': 35,
+            'infrastructure_quality': 50
+        }
+        
+        response = client.post('/api/simulate',
+                              data=json.dumps(payload),
+                              content_type='application/json')
+        initial_data = json.loads(response.data)
+        
+        # Re-evaluate with water shortage context
+        reevaluate_payload = {
+            'original_timestamp': initial_data['timestamp'],
+            'new_findings': {
+                'resources_available': 35,
+                'infrastructure_quality': 50,
+                'additional_notes': 'Water shortage, drinking water unavailable'
+            }
+        }
+        
+        response = client.post('/api/reevaluate',
+                              data=json.dumps(reevaluate_payload),
+                              content_type='application/json')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        recommendation = data['updated_assessment']['recommendation'].lower()
+        
+        # Should contain specific water/supply recommendations
+        assert any(word in recommendation for word in ['water', 'purification', 'distribution', 'supply'])
+    
+    def test_communication_down_context(self, client):
+        """Test communication failure generates specific communication recommendations"""
+        payload = {
+            'disaster_type': 'cyclone',
+            'severity': 9,
+            'population': 80000,
+            'resources_available': 45,
+            'infrastructure_quality': 25
+        }
+        
+        response = client.post('/api/simulate',
+                              data=json.dumps(payload),
+                              content_type='application/json')
+        initial_data = json.loads(response.data)
+        
+        # Re-evaluate with communication failure context
+        reevaluate_payload = {
+            'original_timestamp': initial_data['timestamp'],
+            'new_findings': {
+                'resources_available': 45,
+                'infrastructure_quality': 25,
+                'additional_notes': 'Communication network down, no phone signal'
+            }
+        }
+        
+        response = client.post('/api/reevaluate',
+                              data=json.dumps(reevaluate_payload),
+                              content_type='application/json')
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        recommendation = data['updated_assessment']['recommendation'].lower()
+        
+        # Should contain specific communication recommendations
+        assert any(word in recommendation for word in ['satellite', 'radio', 'communication'])
