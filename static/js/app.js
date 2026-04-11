@@ -7,10 +7,6 @@ const statusText = document.getElementById('statusText');
 const simulationForm = document.getElementById('simulationForm');
 const severitySlider = document.getElementById('severity');
 const severityValue = document.getElementById('severityValue');
-const resourcesSlider = document.getElementById('resources');
-const resourcesValue = document.getElementById('resourcesValue');
-const infrastructureSlider = document.getElementById('infrastructure');
-const infrastructureValue = document.getElementById('infrastructureValue');
 const resultsPanel = document.getElementById('resultsPanel');
 const insightsPanel = document.getElementById('insightsPanel');
 const historySection = document.getElementById('historySection');
@@ -23,32 +19,6 @@ let currentSimulation = null;
 severitySlider.addEventListener('input', (e) => {
     severityValue.textContent = e.target.value;
 });
-
-resourcesSlider.addEventListener('input', (e) => {
-    resourcesValue.textContent = e.target.value;
-});
-
-infrastructureSlider.addEventListener('input', (e) => {
-    infrastructureValue.textContent = e.target.value;
-});
-
-// Update new resources/infrastructure sliders
-const newResourcesSlider = document.getElementById('newResources');
-const newResourcesValue = document.getElementById('newResourcesValue');
-const newInfrastructureSlider = document.getElementById('newInfrastructure');
-const newInfrastructureValue = document.getElementById('newInfrastructureValue');
-
-if (newResourcesSlider) {
-    newResourcesSlider.addEventListener('input', (e) => {
-        newResourcesValue.textContent = e.target.value;
-    });
-}
-
-if (newInfrastructureSlider) {
-    newInfrastructureSlider.addEventListener('input', (e) => {
-        newInfrastructureValue.textContent = e.target.value;
-    });
-}
 
 // Check system health on load
 async function checkHealth() {
@@ -78,8 +48,30 @@ simulationForm.addEventListener('submit', async (e) => {
     const disasterType = document.getElementById('disasterType').value;
     const severity = parseInt(document.getElementById('severity').value);
     const population = parseInt(document.getElementById('population').value);
-    const resources = parseInt(document.getElementById('resources').value);
-    const infrastructure = parseInt(document.getElementById('infrastructure').value);
+    
+    // Collect qualitative resource data
+    const medicalResources = {
+        hospital_status: document.getElementById('hospitalStatus').value,
+        doctor_availability: document.getElementById('doctorAvailability').value
+    };
+    
+    const waterFoodResources = {
+        water_supply: document.getElementById('waterSupply').value,
+        food_supply: document.getElementById('foodSupply').value
+    };
+    
+    const logisticsResources = {
+        transport_status: document.getElementById('transportStatus').value,
+        communication_status: document.getElementById('communicationStatus').value
+    };
+    
+    const emergencyResources = {
+        personnel_availability: document.getElementById('personnelAvailability').value,
+        equipment_status: document.getElementById('equipmentStatus').value
+    };
+    
+    const infrastructureQuality = parseInt(document.getElementById('infrastructureQuality').value);
+    const additionalContext = document.getElementById('additionalContext').value;
     
     // Disable button during request
     const submitBtn = document.getElementById('simulateBtn');
@@ -96,8 +88,12 @@ simulationForm.addEventListener('submit', async (e) => {
                 disaster_type: disasterType,
                 severity: severity,
                 population: population,
-                resources_available: resources,
-                infrastructure_quality: infrastructure
+                medical_resources: medicalResources,
+                water_food_resources: waterFoodResources,
+                logistics_resources: logisticsResources,
+                emergency_resources: emergencyResources,
+                infrastructure_quality: infrastructureQuality,
+                additional_context: additionalContext
             })
         });
         
@@ -160,21 +156,143 @@ function displayResults(data) {
     document.getElementById('detailType').textContent = data.disaster_type.charAt(0).toUpperCase() + data.disaster_type.slice(1);
     document.getElementById('detailSeverity').textContent = data.severity + '/10';
     document.getElementById('detailPopulation').textContent = data.population.toLocaleString();
-    document.getElementById('detailResources').textContent = data.resources_available + '%';
-    document.getElementById('detailInfrastructure').textContent = data.infrastructure_quality + '%';
     
-    // Set up re-evaluation sliders with current values
-    if (newResourcesSlider) {
-        newResourcesSlider.value = data.resources_available;
-        newResourcesValue.textContent = data.resources_available;
+    // Display resource breakdown in organized format
+    const resourcesElement = document.getElementById('detailResources');
+    resourcesElement.innerHTML = ''; // Clear existing content
+    
+    if (data.medical_resources || data.water_food_resources || data.logistics_resources || data.emergency_resources) {
+        const resourceContainer = document.createElement('div');
+        resourceContainer.className = 'resource-breakdown';
+        
+        // Medical Resources
+        if (data.medical_resources) {
+            const medicalDiv = document.createElement('div');
+            medicalDiv.className = 'resource-category';
+            medicalDiv.innerHTML = `
+                <span class="resource-label">Medical:</span>
+                <span class="resource-value ${getResourceClass(data.medical_resources.hospital_status)}">
+                    Hospital: ${capitalizeFirst(data.medical_resources.hospital_status)}
+                </span>
+                <span class="resource-value ${getResourceClass(data.medical_resources.doctor_availability)}">
+                    Doctors: ${capitalizeFirst(data.medical_resources.doctor_availability)}
+                </span>
+            `;
+            resourceContainer.appendChild(medicalDiv);
+        }
+        
+        // Water & Food Resources
+        if (data.water_food_resources) {
+            const suppliesDiv = document.createElement('div');
+            suppliesDiv.className = 'resource-category';
+            suppliesDiv.innerHTML = `
+                <span class="resource-label">Supplies:</span>
+                <span class="resource-value ${getResourceClass(data.water_food_resources.water_supply)}">
+                    Water: ${capitalizeFirst(data.water_food_resources.water_supply)}
+                </span>
+                <span class="resource-value ${getResourceClass(data.water_food_resources.food_supply)}">
+                    Food: ${capitalizeFirst(data.water_food_resources.food_supply)}
+                </span>
+            `;
+            resourceContainer.appendChild(suppliesDiv);
+        }
+        
+        // Logistics Resources
+        if (data.logistics_resources) {
+            const logisticsDiv = document.createElement('div');
+            logisticsDiv.className = 'resource-category';
+            logisticsDiv.innerHTML = `
+                <span class="resource-label">Logistics:</span>
+                <span class="resource-value ${getResourceClass(data.logistics_resources.transport_status)}">
+                    Transport: ${capitalizeFirst(data.logistics_resources.transport_status)}
+                </span>
+                <span class="resource-value ${getResourceClass(data.logistics_resources.communication_status)}">
+                    Comm: ${capitalizeFirst(data.logistics_resources.communication_status)}
+                </span>
+            `;
+            resourceContainer.appendChild(logisticsDiv);
+        }
+        
+        // Emergency Resources
+        if (data.emergency_resources) {
+            const emergencyDiv = document.createElement('div');
+            emergencyDiv.className = 'resource-category';
+            emergencyDiv.innerHTML = `
+                <span class="resource-label">Emergency:</span>
+                <span class="resource-value ${getResourceClass(data.emergency_resources.personnel_availability)}">
+                    Personnel: ${capitalizeFirst(data.emergency_resources.personnel_availability)}
+                </span>
+                <span class="resource-value ${getResourceClass(data.emergency_resources.equipment_status)}">
+                    Equipment: ${capitalizeFirst(data.emergency_resources.equipment_status)}
+                </span>
+            `;
+            resourceContainer.appendChild(emergencyDiv);
+        }
+        
+        resourcesElement.appendChild(resourceContainer);
+    } else {
+        resourcesElement.textContent = 'N/A';
     }
-    if (newInfrastructureSlider) {
-        newInfrastructureSlider.value = data.infrastructure_quality;
-        newInfrastructureValue.textContent = data.infrastructure_quality;
+    
+    document.getElementById('detailInfrastructure').textContent = getInfrastructureLabel(data.infrastructure_quality);
+    
+    // Set up re-evaluation selects with current values
+    if (data.medical_resources) {
+        document.getElementById('newHospitalStatus').value = data.medical_resources.hospital_status;
+        document.getElementById('newDoctorAvailability').value = data.medical_resources.doctor_availability;
     }
+    if (data.water_food_resources) {
+        document.getElementById('newWaterSupply').value = data.water_food_resources.water_supply;
+        document.getElementById('newFoodSupply').value = data.water_food_resources.food_supply;
+    }
+    if (data.logistics_resources) {
+        document.getElementById('newTransportStatus').value = data.logistics_resources.transport_status;
+        document.getElementById('newCommunicationStatus').value = data.logistics_resources.communication_status;
+    }
+    if (data.emergency_resources) {
+        document.getElementById('newPersonnelAvailability').value = data.emergency_resources.personnel_availability;
+        document.getElementById('newEquipmentStatus').value = data.emergency_resources.equipment_status;
+    }
+    document.getElementById('newInfrastructureQuality').value = data.infrastructure_quality;
     
     // Apply color theme based on priority
     applyTheme(data.priority);
+}
+
+// Helper function to get infrastructure label
+function getInfrastructureLabel(value) {
+    if (value >= 90) return 'Fully Functional';
+    if (value >= 60) return 'Partially Functional';
+    if (value >= 40) return 'Moderately Damaged';
+    if (value >= 20) return 'Severely Damaged';
+    return 'Non-Functional';
+}
+
+// Helper function to capitalize first letter
+function capitalizeFirst(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// Helper function to get resource status class for color coding
+function getResourceClass(status) {
+    if (!status) return '';
+    const statusLower = status.toLowerCase();
+    
+    // Good status
+    if (['adequate', 'normal'].includes(statusLower)) {
+        return 'resource-good';
+    }
+    // Moderate status
+    if (['moderate', 'limited'].includes(statusLower)) {
+        return 'resource-moderate';
+    }
+    // Critical status
+    if (['critical', 'scarce', 'collapsed', 'none'].includes(statusLower)) {
+        return 'resource-critical';
+    }
+    
+    return '';
 }
 
 // Update gauge visualization
@@ -287,8 +405,28 @@ if (reevaluateBtn) {
             return;
         }
         
-        const newResources = parseInt(newResourcesSlider.value);
-        const newInfrastructure = parseInt(newInfrastructureSlider.value);
+        // Collect updated qualitative data
+        const newMedicalResources = {
+            hospital_status: document.getElementById('newHospitalStatus').value,
+            doctor_availability: document.getElementById('newDoctorAvailability').value
+        };
+        
+        const newWaterFoodResources = {
+            water_supply: document.getElementById('newWaterSupply').value,
+            food_supply: document.getElementById('newFoodSupply').value
+        };
+        
+        const newLogisticsResources = {
+            transport_status: document.getElementById('newTransportStatus').value,
+            communication_status: document.getElementById('newCommunicationStatus').value
+        };
+        
+        const newEmergencyResources = {
+            personnel_availability: document.getElementById('newPersonnelAvailability').value,
+            equipment_status: document.getElementById('newEquipmentStatus').value
+        };
+        
+        const newInfrastructure = parseInt(document.getElementById('newInfrastructureQuality').value);
         const additionalNotes = document.getElementById('additionalNotes').value;
         
         reevaluateBtn.disabled = true;
@@ -303,7 +441,10 @@ if (reevaluateBtn) {
                 body: JSON.stringify({
                     original_timestamp: currentSimulation.timestamp,
                     new_findings: {
-                        resources_available: newResources,
+                        medical_resources: newMedicalResources,
+                        water_food_resources: newWaterFoodResources,
+                        logistics_resources: newLogisticsResources,
+                        emergency_resources: newEmergencyResources,
                         infrastructure_quality: newInfrastructure,
                         additional_notes: additionalNotes
                     }

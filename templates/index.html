@@ -73,22 +73,107 @@
                         <input type="number" id="population" min="0" placeholder="e.g., 50000" required>
                     </div>
 
+                    <h3 class="section-title">Medical Resources</h3>
                     <div class="form-group">
-                        <label for="resources">Available Resources: <span id="resourcesValue">50</span>%</label>
-                        <input type="range" id="resources" min="0" max="100" value="50" required>
-                        <div class="range-labels">
-                            <span>None</span>
-                            <span>Full</span>
-                        </div>
+                        <label for="hospitalStatus">Hospital Status</label>
+                        <select id="hospitalStatus" required>
+                            <option value="adequate">Adequate - Fully operational</option>
+                            <option value="moderate" selected>Moderate - Partially available</option>
+                            <option value="limited">Limited - Significantly constrained</option>
+                            <option value="critical">Critical - Severely limited</option>
+                            <option value="collapsed">Collapsed - Non-functional</option>
+                        </select>
                     </div>
 
                     <div class="form-group">
-                        <label for="infrastructure">Infrastructure Quality: <span id="infrastructureValue">50</span>%</label>
-                        <input type="range" id="infrastructure" min="0" max="100" value="50" required>
-                        <div class="range-labels">
-                            <span>Collapsed</span>
-                            <span>Intact</span>
-                        </div>
+                        <label for="doctorAvailability">Doctor Availability</label>
+                        <select id="doctorAvailability" required>
+                            <option value="adequate">Adequate - Sufficient staff</option>
+                            <option value="moderate" selected>Moderate - Some available</option>
+                            <option value="limited">Limited - Staff shortage</option>
+                            <option value="scarce">Scarce - Minimal staff</option>
+                            <option value="none">None - No doctors available</option>
+                        </select>
+                    </div>
+
+                    <h3 class="section-title">Water & Food Supply</h3>
+                    <div class="form-group">
+                        <label for="waterSupply">Water Supply</label>
+                        <select id="waterSupply" required>
+                            <option value="adequate">Adequate - Clean water available</option>
+                            <option value="moderate" selected>Moderate - Limited supply</option>
+                            <option value="critical">Critical - Contaminated/scarce</option>
+                            <option value="none">None - No water supply</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="foodSupply">Food Supply</label>
+                        <select id="foodSupply" required>
+                            <option value="adequate">Adequate - Sufficient food</option>
+                            <option value="moderate" selected>Moderate - Limited food</option>
+                            <option value="scarce">Scarce - Critical shortage</option>
+                            <option value="none">None - No food available</option>
+                        </select>
+                    </div>
+
+                    <h3 class="section-title">Logistics & Communication</h3>
+                    <div class="form-group">
+                        <label for="transportStatus">Transport Status</label>
+                        <select id="transportStatus" required>
+                            <option value="normal">Normal - Roads operational</option>
+                            <option value="moderate" selected>Moderate - Some routes blocked</option>
+                            <option value="limited">Limited - Major routes blocked</option>
+                            <option value="collapsed">Collapsed - No access</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="communicationStatus">Communication Status</label>
+                        <select id="communicationStatus" required>
+                            <option value="normal">Normal - Networks operational</option>
+                            <option value="moderate" selected>Moderate - Intermittent</option>
+                            <option value="limited">Limited - Severely disrupted</option>
+                            <option value="collapsed">Collapsed - No communication</option>
+                        </select>
+                    </div>
+
+                    <h3 class="section-title">Emergency Response</h3>
+                    <div class="form-group">
+                        <label for="personnelAvailability">Personnel Availability</label>
+                        <select id="personnelAvailability" required>
+                            <option value="adequate">Adequate - Sufficient personnel</option>
+                            <option value="moderate" selected>Moderate - Some available</option>
+                            <option value="limited">Limited - Staff shortage</option>
+                            <option value="none">None - No personnel</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="equipmentStatus">Equipment Status</label>
+                        <select id="equipmentStatus" required>
+                            <option value="adequate">Adequate - Fully equipped</option>
+                            <option value="moderate" selected>Moderate - Basic equipment</option>
+                            <option value="limited">Limited - Minimal equipment</option>
+                            <option value="none">None - No equipment</option>
+                        </select>
+                    </div>
+
+                    <h3 class="section-title">Infrastructure</h3>
+                    <div class="form-group">
+                        <label for="infrastructureQuality">Overall Infrastructure Quality</label>
+                        <select id="infrastructureQuality" required>
+                            <option value="100">Fully Functional - All systems operational</option>
+                            <option value="75">Partially Functional - Minor damage</option>
+                            <option value="50" selected>Moderately Damaged - Significant issues</option>
+                            <option value="25">Severely Damaged - Critical failures</option>
+                            <option value="0">Non-Functional - Complete collapse</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="additionalContext">Additional Context (Optional)</label>
+                        <textarea id="additionalContext" rows="2" placeholder="e.g., Storm approaching, medical team arrived..."></textarea>
                     </div>
 
                     <button type="submit" class="btn-primary" id="simulateBtn">
@@ -129,15 +214,98 @@
                     <h3>Update Assessment</h3>
                     <p class="section-description">Conditions changed? Re-evaluate with updated information</p>
                     
-                    <div class="form-group-inline">
+                    <div class="form-group-grid">
                         <div class="form-group">
-                            <label for="newResources">Resources: <span id="newResourcesValue">50</span>%</label>
-                            <input type="range" id="newResources" min="0" max="100" value="50">
+                            <label for="newHospitalStatus">Hospital Status</label>
+                            <select id="newHospitalStatus">
+                                <option value="adequate">Adequate</option>
+                                <option value="moderate" selected>Moderate</option>
+                                <option value="limited">Limited</option>
+                                <option value="critical">Critical</option>
+                                <option value="collapsed">Collapsed</option>
+                            </select>
                         </div>
                         
                         <div class="form-group">
-                            <label for="newInfrastructure">Infrastructure: <span id="newInfrastructureValue">50</span>%</label>
-                            <input type="range" id="newInfrastructure" min="0" max="100" value="50">
+                            <label for="newDoctorAvailability">Doctor Availability</label>
+                            <select id="newDoctorAvailability">
+                                <option value="adequate">Adequate</option>
+                                <option value="moderate" selected>Moderate</option>
+                                <option value="limited">Limited</option>
+                                <option value="scarce">Scarce</option>
+                                <option value="none">None</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="newWaterSupply">Water Supply</label>
+                            <select id="newWaterSupply">
+                                <option value="adequate">Adequate</option>
+                                <option value="moderate" selected>Moderate</option>
+                                <option value="critical">Critical</option>
+                                <option value="none">None</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="newFoodSupply">Food Supply</label>
+                            <select id="newFoodSupply">
+                                <option value="adequate">Adequate</option>
+                                <option value="moderate" selected>Moderate</option>
+                                <option value="scarce">Scarce</option>
+                                <option value="none">None</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="newTransportStatus">Transport Status</label>
+                            <select id="newTransportStatus">
+                                <option value="normal">Normal</option>
+                                <option value="moderate" selected>Moderate</option>
+                                <option value="limited">Limited</option>
+                                <option value="collapsed">Collapsed</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="newCommunicationStatus">Communication Status</label>
+                            <select id="newCommunicationStatus">
+                                <option value="normal">Normal</option>
+                                <option value="moderate" selected>Moderate</option>
+                                <option value="limited">Limited</option>
+                                <option value="collapsed">Collapsed</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="newPersonnelAvailability">Personnel Availability</label>
+                            <select id="newPersonnelAvailability">
+                                <option value="adequate">Adequate</option>
+                                <option value="moderate" selected>Moderate</option>
+                                <option value="limited">Limited</option>
+                                <option value="none">None</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="newEquipmentStatus">Equipment Status</label>
+                            <select id="newEquipmentStatus">
+                                <option value="adequate">Adequate</option>
+                                <option value="moderate" selected>Moderate</option>
+                                <option value="limited">Limited</option>
+                                <option value="none">None</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="newInfrastructureQuality">Infrastructure Quality</label>
+                            <select id="newInfrastructureQuality">
+                                <option value="100">Fully Functional</option>
+                                <option value="75">Partially Functional</option>
+                                <option value="50" selected>Moderately Damaged</option>
+                                <option value="25">Severely Damaged</option>
+                                <option value="0">Non-Functional</option>
+                            </select>
                         </div>
                     </div>
 

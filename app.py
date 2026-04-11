@@ -27,16 +27,203 @@ DISASTER_ACTIONS = {
 simulation_history = []
 learned_patterns = []
 
+# Qualitative to Quantitative Mapping
+QUALITATIVE_SCORES = {
+    'adequate': 1.0,
+    'normal': 1.0,
+    'moderate': 0.6,
+    'limited': 0.6,
+    'critical': 0.3,
+    'scarce': 0.3,
+    'none': 0.0,
+    'collapsed': 0.0
+}
 
-def calculate_risk_score(severity, population, resources_available=50, infrastructure_quality=50):
+# Resource category weights (sum to 1.0)
+RESOURCE_WEIGHTS = {
+    'medical': 0.35,      # Highest priority
+    'water_food': 0.30,   # Critical for survival
+    'logistics': 0.20,    # Important for response
+    'emergency': 0.15     # Support capability
+}
+
+
+def calculate_resource_score(medical_resources, water_food_resources, logistics_resources, emergency_resources):
     """
-    Calculate risk score based on multiple factors
+    Calculate overall resource score from qualitative inputs
+    
+    Args:
+        medical_resources: dict with 'hospital_status' and 'doctor_availability'
+        water_food_resources: dict with 'water_supply' and 'food_supply'
+        logistics_resources: dict with 'transport_status' and 'communication_status'
+        emergency_resources: dict with 'personnel_availability' and 'equipment_status'
+    
+    Returns:
+        float: Overall resource score (0-100)
+    """
+    # Calculate category scores (average of indicators)
+    medical_score = (
+        QUALITATIVE_SCORES.get(medical_resources.get('hospital_status', 'moderate'), 0.6) +
+        QUALITATIVE_SCORES.get(medical_resources.get('doctor_availability', 'moderate'), 0.6)
+    ) / 2
+    
+    water_food_score = (
+        QUALITATIVE_SCORES.get(water_food_resources.get('water_supply', 'moderate'), 0.6) +
+        QUALITATIVE_SCORES.get(water_food_resources.get('food_supply', 'moderate'), 0.6)
+    ) / 2
+    
+    logistics_score = (
+        QUALITATIVE_SCORES.get(logistics_resources.get('transport_status', 'moderate'), 0.6) +
+        QUALITATIVE_SCORES.get(logistics_resources.get('communication_status', 'moderate'), 0.6)
+    ) / 2
+    
+    emergency_score = (
+        QUALITATIVE_SCORES.get(emergency_resources.get('personnel_availability', 'moderate'), 0.6) +
+        QUALITATIVE_SCORES.get(emergency_resources.get('equipment_status', 'moderate'), 0.6)
+    ) / 2
+    
+    # Weighted aggregation
+    overall_score = (
+        RESOURCE_WEIGHTS['medical'] * medical_score +
+        RESOURCE_WEIGHTS['water_food'] * water_food_score +
+        RESOURCE_WEIGHTS['logistics'] * logistics_score +
+        RESOURCE_WEIGHTS['emergency'] * emergency_score
+    )
+    
+    # Convert to 0-100 scale
+    return overall_score * 100
+
+
+def analyze_additional_context_impact(additional_context):
+    """
+    Analyze additional context and calculate its impact on risk
+    
+    Returns:
+        tuple: (risk_modifier, context_analysis)
+        risk_modifier: float (-20 to +20 points to add to risk)
+        context_analysis: dict with detected issues
+    """
+    if not additional_context:
+        return 0, {}
+    
+    context_lower = additional_context.lower()
+    risk_modifier = 0
+    context_analysis = {
+        'medical_issues': [],
+        'supply_issues': [],
+        'infrastructure_issues': [],
+        'security_issues': [],
+        'hazmat_issues': [],
+        'positive_developments': []
+    }
+    
+    # CRITICAL HAZMAT/Chemical issues (very high impact)
+    if any(word in context_lower for word in ['gas leak', 'gas', 'chemical', 'toxic', 'hazmat', 'hazardous', 'explosion', 'fire hazard', 'radiation', 'nuclear']):
+        if any(word in context_lower for word in ['leak', 'spill', 'exposure', 'contamination', 'detected', 'reported', 'spreading']):
+            risk_modifier += 15
+            context_analysis['hazmat_issues'].append('Hazardous material/gas leak detected - immediate evacuation required')
+        elif 'gas leak' in context_lower or 'chemical leak' in context_lower or 'toxic' in context_lower:
+            risk_modifier += 15
+            context_analysis['hazmat_issues'].append('Critical hazmat situation')
+    
+    # Explosion/Fire (very high impact)
+    if any(word in context_lower for word in ['explosion', 'blast', 'exploded', 'detonation']):
+        risk_modifier += 12
+        context_analysis['hazmat_issues'].append('Explosion reported - secondary hazards likely')
+    
+    # Fire spreading (high impact)
+    if any(word in context_lower for word in ['fire', 'burning', 'flames']):
+        if any(word in context_lower for word in ['spreading', 'out of control', 'uncontrolled', 'growing', 'multiple']):
+            risk_modifier += 10
+            context_analysis['hazmat_issues'].append('Fire spreading rapidly')
+    
+    # Medical issues (high impact)
+    if any(word in context_lower for word in ['doctor', 'medical', 'hospital', 'healthcare', 'ambulance']):
+        if any(word in context_lower for word in ['no', 'not', 'unavailable', 'shortage', 'lacking', 'insufficient', 'overwhelmed']):
+            risk_modifier += 8
+            context_analysis['medical_issues'].append('Medical personnel/facilities unavailable or overwhelmed')
+        elif any(word in context_lower for word in ['many', 'casualties', 'injured', 'wounded', 'deaths', 'fatalities']):
+            risk_modifier += 10
+            context_analysis['medical_issues'].append('High casualty count')
+    
+    # Disease/Epidemic (high impact)
+    if any(word in context_lower for word in ['disease', 'epidemic', 'outbreak', 'infection', 'contagious', 'virus', 'pandemic']):
+        risk_modifier += 9
+        context_analysis['medical_issues'].append('Disease outbreak or epidemic risk')
+    
+    # Supply issues (high impact)
+    if any(word in context_lower for word in ['water', 'food', 'supplies', 'medicine', 'fuel']):
+        if any(word in context_lower for word in ['no', 'not', 'unavailable', 'shortage', 'contaminated', 'insufficient', 'running out', 'depleted']):
+            risk_modifier += 7
+            context_analysis['supply_issues'].append('Critical supply shortage')
+    
+    # Infrastructure issues (medium-high impact)
+    if any(word in context_lower for word in ['road', 'bridge', 'transport', 'communication', 'power', 'electricity', 'network']):
+        if any(word in context_lower for word in ['blocked', 'down', 'failed', 'collapsed', 'damaged', 'outage', 'destroyed']):
+            risk_modifier += 6
+            context_analysis['infrastructure_issues'].append('Infrastructure failure')
+    
+    # Building collapse (high impact)
+    if any(word in context_lower for word in ['building', 'structure', 'dam', 'levee']):
+        if any(word in context_lower for word in ['collapse', 'collapsed', 'collapsing', 'failing', 'breach', 'breached']):
+            risk_modifier += 10
+            context_analysis['infrastructure_issues'].append('Structural collapse - major hazard')
+    
+    # Flooding/Water rising (medium-high impact)
+    if any(word in context_lower for word in ['flood', 'water', 'river']):
+        if any(word in context_lower for word in ['rising', 'increasing', 'overflow', 'overflowing', 'surge']):
+            risk_modifier += 7
+            context_analysis['infrastructure_issues'].append('Water levels rising rapidly')
+    
+    # Security issues (medium impact)
+    if any(word in context_lower for word in ['looting', 'violence', 'crime', 'riot', 'panic', 'chaos']):
+        risk_modifier += 5
+        context_analysis['security_issues'].append('Security concerns - civil unrest')
+    
+    # Weather worsening (medium impact)
+    if any(word in context_lower for word in ['weather', 'storm', 'rain', 'wind', 'hurricane', 'tornado', 'cyclone']):
+        if any(word in context_lower for word in ['worsening', 'approaching', 'deteriorating', 'intensifying', 'strengthening']):
+            risk_modifier += 5
+            context_analysis['infrastructure_issues'].append('Weather deteriorating')
+    
+    # Aftershocks/Secondary disasters (medium impact)
+    if any(word in context_lower for word in ['aftershock', 'tremor', 'secondary', 'landslide', 'mudslide']):
+        risk_modifier += 6
+        context_analysis['infrastructure_issues'].append('Secondary disaster risk')
+    
+    # Evacuation issues (medium impact)
+    if any(word in context_lower for word in ['evacuation', 'evacuate', 'trapped', 'stranded', 'isolated']):
+        if any(word in context_lower for word in ['unable', 'cannot', 'impossible', 'blocked', 'cut off']):
+            risk_modifier += 7
+            context_analysis['infrastructure_issues'].append('Evacuation routes blocked - people trapped')
+    
+    # Positive developments (reduce risk)
+    if any(word in context_lower for word in ['arrived', 'deployed', 'restored', 'cleared', 'operational', 'improved', 'contained', 'controlled', 'stabilized']):
+        risk_modifier -= 5
+        context_analysis['positive_developments'].append('Situation improving')
+    
+    # Cap the modifier
+    risk_modifier = max(-20, min(20, risk_modifier))
+    
+    return risk_modifier, context_analysis
+
+
+def calculate_risk_score(severity, population, resources_available=50, infrastructure_quality=50, 
+                         medical_resources=None, water_food_resources=None, logistics_resources=None, 
+                         emergency_resources=None, additional_context=""):
+    """
+    Calculate risk score based on multiple factors including qualitative resources and context
     
     Args:
         severity: Disaster severity (1-10)
         population: Affected population count
-        resources_available: Available resources percentage (0-100)
+        resources_available: Legacy percentage (0-100) - used if qualitative not provided
         infrastructure_quality: Infrastructure quality percentage (0-100)
+        medical_resources: dict with qualitative medical resource indicators
+        water_food_resources: dict with qualitative water/food indicators
+        logistics_resources: dict with qualitative logistics indicators
+        emergency_resources: dict with qualitative emergency response indicators
+        additional_context: str with additional situation context
     
     Returns:
         tuple: (risk_score, reasoning)
@@ -63,16 +250,51 @@ def calculate_risk_score(severity, population, resources_available=50, infrastru
     
     reasoning.append(f"Affected population of {population:,} ({pop_category} scale) adds {pop_impact} points")
     
-    # Resource availability impact (reduces risk by 0-15 points)
-    resource_reduction = (resources_available / 100) * 15
-    reasoning.append(f"Available resources at {resources_available}% reduce risk by {resource_reduction:.1f} points")
+    # Calculate resource score (qualitative if provided, else use legacy)
+    if medical_resources or water_food_resources or logistics_resources or emergency_resources:
+        # Use qualitative model
+        med_res = medical_resources or {}
+        wf_res = water_food_resources or {}
+        log_res = logistics_resources or {}
+        emg_res = emergency_resources or {}
+        
+        calculated_resources = calculate_resource_score(med_res, wf_res, log_res, emg_res)
+        resource_reduction = (calculated_resources / 100) * 15
+        reasoning.append(f"Qualitative resource assessment at {calculated_resources:.1f}% reduces risk by {resource_reduction:.1f} points")
+        
+        # Add detailed resource breakdown
+        if med_res:
+            reasoning.append(f"  - Medical: Hospital {med_res.get('hospital_status', 'N/A')}, Doctors {med_res.get('doctor_availability', 'N/A')}")
+        if wf_res:
+            reasoning.append(f"  - Supplies: Water {wf_res.get('water_supply', 'N/A')}, Food {wf_res.get('food_supply', 'N/A')}")
+        if log_res:
+            reasoning.append(f"  - Logistics: Transport {log_res.get('transport_status', 'N/A')}, Communication {log_res.get('communication_status', 'N/A')}")
+        if emg_res:
+            reasoning.append(f"  - Emergency: Personnel {emg_res.get('personnel_availability', 'N/A')}, Equipment {emg_res.get('equipment_status', 'N/A')}")
+    else:
+        # Use legacy percentage model
+        resource_reduction = (resources_available / 100) * 15
+        reasoning.append(f"Available resources at {resources_available}% reduce risk by {resource_reduction:.1f} points")
     
     # Infrastructure quality impact (reduces risk by 0-15 points)
     infrastructure_reduction = (infrastructure_quality / 100) * 15
     reasoning.append(f"Infrastructure quality at {infrastructure_quality}% reduces risk by {infrastructure_reduction:.1f} points")
     
+    # Analyze additional context impact
+    context_modifier, context_analysis = analyze_additional_context_impact(additional_context)
+    if context_modifier != 0:
+        if context_modifier > 0:
+            reasoning.append(f"Additional context INCREASES risk by {context_modifier:.1f} points:")
+        else:
+            reasoning.append(f"Additional context DECREASES risk by {abs(context_modifier):.1f} points:")
+        
+        for category, issues in context_analysis.items():
+            if issues:
+                for issue in issues:
+                    reasoning.append(f"  - {issue}")
+    
     # Calculate final risk score
-    risk_score = severity_impact + pop_impact - resource_reduction - infrastructure_reduction
+    risk_score = severity_impact + pop_impact - resource_reduction - infrastructure_reduction + context_modifier
     risk_score = max(0, min(risk_score, 100))  # Clamp between 0-100
     
     reasoning.append(f"Final calculated risk score: {risk_score:.1f}/100")
@@ -90,7 +312,8 @@ def determine_priority(risk_score):
         return 'LOW'
 
 
-def enhance_recommendation(base_recommendation, resources, infrastructure, priority, additional_context=""):
+def enhance_recommendation(base_recommendation, resources, infrastructure, priority, additional_context="", 
+                         medical_resources=None, water_food_resources=None, logistics_resources=None, emergency_resources=None):
     """
     Enhance recommendation based on available resources, infrastructure, and context
     Intelligently parses additional context to provide specific actionable recommendations
@@ -98,7 +321,78 @@ def enhance_recommendation(base_recommendation, resources, infrastructure, prior
     enhanced = base_recommendation
     recommendations = []
     
-    # Resource-based enhancements
+    # Calculate actual resource score if qualitative data provided
+    if medical_resources or water_food_resources or logistics_resources or emergency_resources:
+        med_res = medical_resources or {}
+        wf_res = water_food_resources or {}
+        log_res = logistics_resources or {}
+        emg_res = emergency_resources or {}
+        resources = calculate_resource_score(med_res, wf_res, log_res, emg_res)
+    
+    # SPECIFIC RESOURCE CATEGORY RECOMMENDATIONS
+    # Analyze each resource category and provide targeted recommendations
+    
+    # Medical Resources Analysis
+    if medical_resources:
+        hospital_status = medical_resources.get('hospital_status', 'moderate')
+        doctor_availability = medical_resources.get('doctor_availability', 'moderate')
+        
+        if hospital_status in ['critical', 'collapsed']:
+            recommendations.append("MEDICAL INFRASTRUCTURE CRISIS: Hospitals severely compromised. Deploy mobile field hospitals immediately. Establish emergency medical stations. Request medical infrastructure support from neighboring regions. Set up triage centers in stable buildings.")
+        elif hospital_status == 'limited':
+            recommendations.append("HOSPITAL CAPACITY WARNING: Hospital capacity limited. Prepare overflow facilities. Coordinate with private medical facilities. Establish patient transfer protocols to less affected areas.")
+        
+        if doctor_availability in ['scarce', 'none']:
+            recommendations.append("MEDICAL PERSONNEL EMERGENCY: Critical shortage of medical staff. Request immediate deployment of medical teams from neighboring regions. Mobilize military medical corps. Coordinate with medical volunteer organizations. Establish telemedicine support if communication available.")
+        elif doctor_availability == 'limited':
+            recommendations.append("MEDICAL STAFFING CONCERN: Medical personnel shortage. Request additional doctors and nurses. Extend shifts with proper rest protocols. Prioritize critical cases. Train paramedics for expanded roles.")
+    
+    # Water & Food Resources Analysis
+    if water_food_resources:
+        water_supply = water_food_resources.get('water_supply', 'moderate')
+        food_supply = water_food_resources.get('food_supply', 'moderate')
+        
+        if water_supply in ['critical', 'none']:
+            recommendations.append("WATER CRISIS: Critical water shortage. Deploy emergency water tankers immediately. Establish water distribution points. Deploy water purification units. Coordinate with bottled water suppliers. Implement water rationing protocols. Check for contamination sources.")
+        elif water_supply == 'moderate':
+            recommendations.append("WATER SUPPLY CONCERN: Water supply limited. Monitor consumption rates. Prepare backup water sources. Deploy additional purification capacity. Establish conservation guidelines.")
+        
+        if food_supply in ['scarce', 'none']:
+            recommendations.append("FOOD EMERGENCY: Critical food shortage. Activate emergency food distribution immediately. Coordinate with food banks and humanitarian organizations. Deploy mobile kitchens. Establish community feeding centers. Request food aid from national reserves. Prioritize vulnerable populations (children, elderly, medical patients).")
+        elif food_supply == 'moderate':
+            recommendations.append("FOOD SUPPLY CONCERN: Food supplies limited. Organize systematic distribution. Monitor inventory levels. Coordinate with local suppliers. Prevent hoarding. Establish rationing if needed.")
+    
+    # Logistics & Communication Resources Analysis
+    if logistics_resources:
+        transport_status = logistics_resources.get('transport_status', 'moderate')
+        communication_status = logistics_resources.get('communication_status', 'moderate')
+        
+        if transport_status in ['collapsed', 'limited']:
+            recommendations.append("TRANSPORTATION CRISIS: Transport infrastructure severely compromised. Deploy helicopters for critical transport. Establish alternative routes immediately. Use boats/amphibious vehicles if applicable. Clear priority access routes. Coordinate with military for heavy equipment. Establish supply drop zones for aerial delivery.")
+        elif transport_status == 'moderate':
+            recommendations.append("TRANSPORT CONCERN: Transportation partially disrupted. Prioritize emergency vehicle access. Establish traffic control points. Monitor route conditions continuously. Prepare alternative routes.")
+        
+        if communication_status in ['collapsed', 'limited']:
+            recommendations.append("COMMUNICATION BREAKDOWN: Communication systems severely disrupted. Deploy satellite phones immediately. Establish radio communication network. Use runners/messengers for critical information. Set up information centers at key locations. Deploy mobile communication units. Coordinate with amateur radio operators.")
+        elif communication_status == 'moderate':
+            recommendations.append("COMMUNICATION CONCERN: Communication systems intermittent. Establish backup communication channels. Deploy additional equipment. Prioritize emergency communications. Maintain communication logs.")
+    
+    # Emergency Response Resources Analysis
+    if emergency_resources:
+        personnel_availability = emergency_resources.get('personnel_availability', 'moderate')
+        equipment_status = emergency_resources.get('equipment_status', 'moderate')
+        
+        if personnel_availability in ['limited', 'none']:
+            recommendations.append("PERSONNEL SHORTAGE: Emergency response personnel critically low. Request immediate deployment of additional response teams. Mobilize reserves and volunteers. Coordinate with neighboring jurisdictions for mutual aid. Establish volunteer training programs. Prioritize critical operations. Implement shift rotation to prevent burnout.")
+        elif personnel_availability == 'moderate':
+            recommendations.append("PERSONNEL CONCERN: Response personnel stretched. Request additional teams. Organize efficient shift rotations. Prioritize high-impact operations. Prepare for extended operations.")
+        
+        if equipment_status in ['limited', 'none']:
+            recommendations.append("EQUIPMENT SHORTAGE: Critical shortage of emergency equipment. Request immediate equipment deployment from regional stockpiles. Coordinate equipment sharing with neighboring areas. Prioritize essential equipment for life-saving operations. Establish equipment maintenance protocols. Request military equipment support if available.")
+        elif equipment_status == 'moderate':
+            recommendations.append("EQUIPMENT CONCERN: Emergency equipment limited. Monitor equipment status. Establish maintenance priorities. Request backup equipment. Optimize equipment utilization.")
+    
+    # Resource-based enhancements (overall)
     if resources < 30:
         recommendations.append("CRITICAL: Immediate external aid required due to low resource availability.")
     elif resources < 50:
@@ -124,8 +418,42 @@ def enhance_recommendation(base_recommendation, resources, infrastructure, prior
     if additional_context:
         context_lower = additional_context.lower()
         
+        # CRITICAL: Gas Leak / Hazmat / Chemical (HIGHEST PRIORITY)
+        if any(word in context_lower for word in ['gas leak', 'gas', 'chemical', 'toxic', 'hazmat', 'hazardous']):
+            if any(word in context_lower for word in ['leak', 'spill', 'exposure', 'contamination', 'detected', 'reported']):
+                recommendations.append("CRITICAL HAZMAT EMERGENCY: Immediate evacuation of affected area. Deploy hazmat teams with protective equipment. Establish exclusion zone. Shut off gas/chemical sources. Evacuate downwind areas. Request specialized hazmat response units. Set up decontamination stations. Monitor air quality continuously.")
+            elif 'gas leak' in context_lower:
+                recommendations.append("GAS LEAK EMERGENCY: Evacuate immediate area. No open flames or electrical switches. Shut off gas supply. Ventilate area if safe. Deploy gas detection equipment. Establish safety perimeter. Request utility company emergency response.")
+        
+        # Explosion / Fire spreading
+        elif any(word in context_lower for word in ['explosion', 'blast', 'exploded']):
+            recommendations.append("EXPLOSION RESPONSE: Secure perimeter immediately. Search for secondary devices/hazards. Evacuate surrounding buildings. Deploy bomb squad if intentional. Establish triage for blast injuries. Check for structural damage. Assess for gas leaks or fire hazards.")
+        
+        elif any(word in context_lower for word in ['fire', 'burning', 'flames']):
+            if any(word in context_lower for word in ['spreading', 'out of control', 'uncontrolled', 'growing']):
+                recommendations.append("FIRE EMERGENCY: Deploy additional fire brigades immediately. Establish firebreaks. Evacuate threatened areas. Protect critical infrastructure. Request mutual aid from neighboring departments. Monitor wind direction. Prepare for spot fires.")
+        
+        # Building collapse / Structural failure
+        elif any(word in context_lower for word in ['building', 'structure', 'dam', 'levee']):
+            if any(word in context_lower for word in ['collapse', 'collapsed', 'collapsing', 'failing', 'breach']):
+                recommendations.append("STRUCTURAL COLLAPSE: Deploy urban search and rescue teams immediately. Establish collapse zone perimeter. Evacuate adjacent structures. Use specialized equipment for victim location. Shore up unstable structures. Coordinate with structural engineers. Prepare for secondary collapses.")
+        
+        # Flooding / Rising water
+        elif any(word in context_lower for word in ['flood', 'water']):
+            if any(word in context_lower for word in ['rising', 'increasing', 'overflow', 'surge']):
+                recommendations.append("FLOOD ALERT: Evacuate low-lying areas immediately. Deploy water rescue teams. Establish evacuation routes to higher ground. Monitor water levels continuously. Prepare for infrastructure failure. Secure hazardous materials. Cut power to flooded areas.")
+        
+        # Disease outbreak / Epidemic
+        elif any(word in context_lower for word in ['disease', 'epidemic', 'outbreak', 'infection', 'contagious']):
+            recommendations.append("EPIDEMIC RESPONSE: Establish quarantine zones immediately. Deploy medical teams with PPE. Set up isolation facilities. Implement contact tracing. Distribute medical supplies and vaccines if available. Coordinate with health authorities. Establish public health messaging.")
+        
+        # Evacuation blocked / People trapped
+        elif any(word in context_lower for word in ['trapped', 'stranded', 'isolated', 'evacuation']):
+            if any(word in context_lower for word in ['unable', 'cannot', 'impossible', 'blocked', 'cut off']):
+                recommendations.append("EVACUATION CRISIS: Deploy helicopters for aerial rescue. Establish alternative evacuation routes. Use boats/amphibious vehicles if applicable. Drop supplies to isolated areas. Establish communication with trapped populations. Prioritize medical evacuations.")
+        
         # Medical/Healthcare related
-        if any(word in context_lower for word in ['doctor', 'doctors', 'medical', 'hospital', 'healthcare', 'physician', 'nurse', 'paramedic']):
+        elif any(word in context_lower for word in ['doctor', 'doctors', 'medical', 'hospital', 'healthcare', 'physician', 'nurse', 'paramedic']):
             if any(word in context_lower for word in ['no', 'not', 'unavailable', 'shortage', 'lacking', 'insufficient', 'limited']):
                 recommendations.append("MEDICAL CRISIS: Deploy mobile medical units immediately. Request medical personnel from neighboring regions. Establish triage centers with available staff. Coordinate with military medical corps.")
             elif any(word in context_lower for word in ['arrived', 'available', 'deployed', 'present']):
@@ -237,8 +565,25 @@ def simulate_disaster():
         "disaster_type": "flood",
         "severity": 7,
         "population": 50000,
-        "resources_available": 50,  // optional, 0-100
-        "infrastructure_quality": 50  // optional, 0-100
+        "resources_available": 50,  // optional legacy
+        "infrastructure_quality": 50,  // optional
+        "medical_resources": {  // optional qualitative
+            "hospital_status": "moderate",
+            "doctor_availability": "limited"
+        },
+        "water_food_resources": {  // optional qualitative
+            "water_supply": "adequate",
+            "food_supply": "moderate"
+        },
+        "logistics_resources": {  // optional qualitative
+            "transport_status": "critical",
+            "communication_status": "moderate"
+        },
+        "emergency_resources": {  // optional qualitative
+            "personnel_availability": "moderate",
+            "equipment_status": "adequate"
+        },
+        "additional_context": "No doctors available"  // optional
     }
     """
     try:
@@ -253,6 +598,13 @@ def simulate_disaster():
         population = data.get('population')
         resources_available = data.get('resources_available', 50)
         infrastructure_quality = data.get('infrastructure_quality', 50)
+        
+        # Qualitative resource inputs
+        medical_resources = data.get('medical_resources')
+        water_food_resources = data.get('water_food_resources')
+        logistics_resources = data.get('logistics_resources')
+        emergency_resources = data.get('emergency_resources')
+        additional_context = data.get('additional_context', '')
         
         # Validation
         if not disaster_type or disaster_type not in DISASTER_ACTIONS:
@@ -275,14 +627,17 @@ def simulate_disaster():
         
         # Calculate risk and priority with reasoning
         risk_score, reasoning = calculate_risk_score(
-            severity, population, resources_available, infrastructure_quality
+            severity, population, resources_available, infrastructure_quality,
+            medical_resources, water_food_resources, logistics_resources, emergency_resources,
+            additional_context
         )
         priority = determine_priority(risk_score)
         recommendation = DISASTER_ACTIONS[disaster_type]
         
-        # Enhance recommendation based on resources
+        # Enhance recommendation based on resources and context
         enhanced_recommendation = enhance_recommendation(
-            recommendation, resources_available, infrastructure_quality, priority
+            recommendation, resources_available, infrastructure_quality, priority, additional_context,
+            medical_resources, water_food_resources, logistics_resources, emergency_resources
         )
         
         # Create response
@@ -292,6 +647,11 @@ def simulate_disaster():
             'population': population,
             'resources_available': resources_available,
             'infrastructure_quality': infrastructure_quality,
+            'medical_resources': medical_resources,
+            'water_food_resources': water_food_resources,
+            'logistics_resources': logistics_resources,
+            'emergency_resources': emergency_resources,
+            'additional_context': additional_context,
             'risk_score': round(risk_score, 2),
             'priority': priority,
             'recommendation': enhanced_recommendation,
@@ -356,19 +716,31 @@ def reevaluate_disaster():
         new_infrastructure = new_findings.get('infrastructure_quality', original.get('infrastructure_quality', 50))
         additional_notes = new_findings.get('additional_notes', '')
         
-        # Recalculate risk with new information
+        # Qualitative resource updates
+        new_medical = new_findings.get('medical_resources', original.get('medical_resources'))
+        new_water_food = new_findings.get('water_food_resources', original.get('water_food_resources'))
+        new_logistics = new_findings.get('logistics_resources', original.get('logistics_resources'))
+        new_emergency = new_findings.get('emergency_resources', original.get('emergency_resources'))
+        
+        # Recalculate risk with new information AND context impact
         new_risk_score, new_reasoning = calculate_risk_score(
             original['severity'],
             original['population'],
             new_resources,
-            new_infrastructure
+            new_infrastructure,
+            new_medical,
+            new_water_food,
+            new_logistics,
+            new_emergency,
+            additional_notes  # Context now affects risk calculation
         )
         new_priority = determine_priority(new_risk_score)
         
         # Enhanced recommendation with context
         base_recommendation = DISASTER_ACTIONS[original['disaster_type']]
         new_recommendation = enhance_recommendation(
-            base_recommendation, new_resources, new_infrastructure, new_priority, additional_notes
+            base_recommendation, 0, new_infrastructure, new_priority, additional_notes,
+            new_medical, new_water_food, new_logistics, new_emergency
         )
         
         # Calculate changes
@@ -400,6 +772,11 @@ def reevaluate_disaster():
                 'population': original['population'],
                 'resources_available': new_resources,
                 'infrastructure_quality': new_infrastructure,
+                'medical_resources': new_medical,
+                'water_food_resources': new_water_food,
+                'logistics_resources': new_logistics,
+                'emergency_resources': new_emergency,
+                'additional_context': additional_notes,
                 'risk_score': round(new_risk_score, 2),
                 'priority': new_priority,
                 'recommendation': new_recommendation,
@@ -482,6 +859,41 @@ def get_disaster_types():
     """Get available disaster types"""
     return jsonify({
         'disaster_types': list(DISASTER_ACTIONS.keys())
+    }), 200
+
+
+@app.route('/api/resource-options', methods=['GET'])
+def get_resource_options():
+    """Get qualitative resource options and their descriptions"""
+    return jsonify({
+        'options': {
+            'adequate': {'score': 1.0, 'description': 'Fully operational and sufficient'},
+            'normal': {'score': 1.0, 'description': 'Normal operating capacity'},
+            'moderate': {'score': 0.6, 'description': 'Partially available, some limitations'},
+            'limited': {'score': 0.6, 'description': 'Significantly constrained'},
+            'critical': {'score': 0.3, 'description': 'Severely limited, barely functional'},
+            'scarce': {'score': 0.3, 'description': 'Extremely limited availability'},
+            'none': {'score': 0.0, 'description': 'Completely unavailable'},
+            'collapsed': {'score': 0.0, 'description': 'Total system failure'}
+        },
+        'categories': {
+            'medical': {
+                'weight': 0.35,
+                'indicators': ['hospital_status', 'doctor_availability']
+            },
+            'water_food': {
+                'weight': 0.30,
+                'indicators': ['water_supply', 'food_supply']
+            },
+            'logistics': {
+                'weight': 0.20,
+                'indicators': ['transport_status', 'communication_status']
+            },
+            'emergency': {
+                'weight': 0.15,
+                'indicators': ['personnel_availability', 'equipment_status']
+            }
+        }
     }), 200
 
 
