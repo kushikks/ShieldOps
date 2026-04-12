@@ -148,7 +148,7 @@ jobs:
           # Check health endpoint
           response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/health)
           
-          if [ "$response" = "500" ]; then
+          if [ "$response" = "200" ]; then
             echo "✅ Health check passed (HTTP $response)"
           else
             echo "❌ Health check failed (HTTP $response)"
