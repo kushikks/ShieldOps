@@ -73,10 +73,14 @@ simulationForm.addEventListener('submit', async (e) => {
     const infrastructureQuality = parseInt(document.getElementById('infrastructureQuality').value);
     const additionalContext = document.getElementById('additionalContext').value;
     
-    // Disable button during request
+    // Disable button and show loading
     const submitBtn = document.getElementById('simulateBtn');
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Simulating...';
+    submitBtn.innerHTML = '<span class="spinner"></span> Generating AI Recommendations...';
+    
+    // Show loading in results panel
+    resultsPanel.style.display = 'block';
+    document.getElementById('recommendationText').innerHTML = '<div class="loading-container"><div class="spinner-large"></div><p>AI is analyzing the situation and generating recommendations...</p></div>';
     
     try {
         const response = await fetch(`${API_BASE}/api/simulate`, {
@@ -110,9 +114,10 @@ simulationForm.addEventListener('submit', async (e) => {
     } catch (error) {
         alert('Simulation failed: ' + error.message);
         console.error('Simulation error:', error);
+        document.getElementById('recommendationText').innerHTML = '<p style="color: var(--danger);">Failed to generate recommendations. Please try again.</p>';
     } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Run Simulation';
+        submitBtn.innerHTML = 'Run Simulation';
     }
 });
 
@@ -135,7 +140,10 @@ function displayResults(data) {
     priorityBadge.className = 'priority-badge ' + data.priority.toLowerCase();
     
     // Update recommendation
-    document.getElementById('recommendationText').textContent = data.recommendation;
+    const recommendationText = document.getElementById('recommendationText');
+    // Convert newlines to HTML breaks for proper formatting
+    recommendationText.innerHTML = data.recommendation.replace(/\n/g, '<br>');
+
     
     // Display reasoning
     if (data.reasoning) {
@@ -391,6 +399,36 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // SOS button handler (for dashboard header)
+    const sosButtonHeader = document.getElementById('sosButtonHeader');
+    if (sosButtonHeader) {
+        sosButtonHeader.addEventListener('click', () => {
+            sosButtonHeader.classList.add('sos-active');
+            sosButtonHeader.innerHTML = `
+                <svg class="sos-icon-small sos-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                </svg>
+                <span>Deploying Help...</span>
+            `;
+            
+            // Show notification
+            showNotification('SOS Alert', 'Emergency help is being deployed to your location. Stay safe!', 'warning');
+            
+            // Reset after 3 seconds
+            setTimeout(() => {
+                sosButtonHeader.classList.remove('sos-active');
+                sosButtonHeader.innerHTML = `
+                    <svg class="sos-icon-small" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span>SOS</span>
+                `;
+            }, 3000);
+        });
+    }
+    
     // Refresh health check every 30 seconds
     setInterval(checkHealth, 30000);
 });
@@ -430,7 +468,10 @@ if (reevaluateBtn) {
         const additionalNotes = document.getElementById('additionalNotes').value;
         
         reevaluateBtn.disabled = true;
-        reevaluateBtn.textContent = 'Re-evaluating...';
+        reevaluateBtn.innerHTML = '<span class="spinner"></span> Re-evaluating with AI...';
+        
+        // Show loading in recommendation
+        document.getElementById('recommendationText').innerHTML = '<div class="loading-container"><div class="spinner-large"></div><p>AI is re-analyzing with updated information...</p></div>';
         
         try {
             const response = await fetch(`${API_BASE}/api/reevaluate`, {
@@ -458,13 +499,15 @@ if (reevaluateBtn) {
             const data = await response.json();
             displayReevaluationResults(data);
             await loadLearnings();
+            await loadHistory();
             
         } catch (error) {
             alert('Re-evaluation failed: ' + error.message);
             console.error('Re-evaluation error:', error);
+            document.getElementById('recommendationText').innerHTML = '<p style="color: var(--danger);">Failed to re-evaluate. Please try again.</p>';
         } finally {
             reevaluateBtn.disabled = false;
-            reevaluateBtn.textContent = 'Re-evaluate Risk';
+            reevaluateBtn.innerHTML = 'Re-evaluate Risk';
         }
     });
 }

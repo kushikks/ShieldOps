@@ -7,6 +7,13 @@ from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 from datetime import datetime
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Import AI service
+from ai_service import get_ai_service
 
 app = Flask(__name__)
 CORS(app)
@@ -542,8 +549,21 @@ def enhance_recommendation(base_recommendation, resources, infrastructure, prior
 
 
 @app.route('/')
-def index():
-    """Serve the dashboard"""
+def root():
+    """Redirect to login page"""
+    from flask import redirect, url_for
+    return redirect(url_for('login'))
+
+
+@app.route('/login')
+def login():
+    """Serve the login page"""
+    return render_template('login.html')
+
+
+@app.route('/dashboard')
+def dashboard():
+    """Serve the main dashboard"""
     return render_template('index.html')
 
 
@@ -632,12 +652,21 @@ def simulate_disaster():
             additional_context
         )
         priority = determine_priority(risk_score)
-        recommendation = DISASTER_ACTIONS[disaster_type]
         
-        # Enhance recommendation based on resources and context
-        enhanced_recommendation = enhance_recommendation(
-            recommendation, resources_available, infrastructure_quality, priority, additional_context,
-            medical_resources, water_food_resources, logistics_resources, emergency_resources
+        # Generate AI-powered recommendation
+        ai_service = get_ai_service()
+        recommendation = ai_service.generate_recommendation(
+            disaster_type=disaster_type,
+            severity=severity,
+            population=population,
+            risk_score=risk_score,
+            priority=priority,
+            medical_resources=medical_resources,
+            water_food_resources=water_food_resources,
+            logistics_resources=logistics_resources,
+            emergency_resources=emergency_resources,
+            infrastructure_quality=infrastructure_quality,
+            additional_context=additional_context
         )
         
         # Create response
@@ -654,7 +683,7 @@ def simulate_disaster():
             'additional_context': additional_context,
             'risk_score': round(risk_score, 2),
             'priority': priority,
-            'recommendation': enhanced_recommendation,
+            'recommendation': recommendation,  # AI-generated
             'reasoning': reasoning,
             'timestamp': datetime.utcnow().isoformat()
         }
@@ -736,11 +765,20 @@ def reevaluate_disaster():
         )
         new_priority = determine_priority(new_risk_score)
         
-        # Enhanced recommendation with context
-        base_recommendation = DISASTER_ACTIONS[original['disaster_type']]
-        new_recommendation = enhance_recommendation(
-            base_recommendation, 0, new_infrastructure, new_priority, additional_notes,
-            new_medical, new_water_food, new_logistics, new_emergency
+        # Generate AI-powered recommendation with updated context
+        ai_service = get_ai_service()
+        new_recommendation = ai_service.generate_recommendation(
+            disaster_type=original['disaster_type'],
+            severity=original['severity'],
+            population=original['population'],
+            risk_score=new_risk_score,
+            priority=new_priority,
+            medical_resources=new_medical,
+            water_food_resources=new_water_food,
+            logistics_resources=new_logistics,
+            emergency_resources=new_emergency,
+            infrastructure_quality=new_infrastructure,
+            additional_context=additional_notes
         )
         
         # Calculate changes

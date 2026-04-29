@@ -44,9 +44,10 @@ Thumbs.db
 # Logs
 *.log
 
-# Environment
+# Environment (IMPORTANT)
 .env
-.env.local
+.env.*
+!.env.example
 
 # Docker
 *.tar
