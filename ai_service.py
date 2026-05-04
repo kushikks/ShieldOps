@@ -106,6 +106,15 @@ class AIRecommendationService:
             emergency_resources, infrastructure_quality, additional_context
         )
         
+        # Check if we are in testing mode to return deterministic results
+        try:
+            from flask import current_app
+            if current_app and current_app.config.get('TESTING'):
+                print("[AI Service] TESTING mode detected - using fallback")
+                return self._generate_fallback(disaster_type, priority, additional_context)
+        except Exception:
+            pass
+            
         # Try AI generation
         try:
             if self.use_local_ai:
