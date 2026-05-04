@@ -70,7 +70,7 @@ def after_request(response):
     # Comprehensive Content Security Policy
     csp = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; "
+        "script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data: https://*.tile.openstreetmap.org https://unpkg.com; "
@@ -87,10 +87,12 @@ def after_request(response):
     response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
     response.headers['Cross-Origin-Resource-Policy'] = 'same-origin'
     
-    # Cache control for sensitive pages
-    if request.path in ['/dashboard', '/api/history', '/api/evaluate', '/login', '/register']:
+    # Cache control for all pages to resolve ZAP "Non-Storable Content" warning
+    # Apply to successful responses and redirects
+    if response.status_code in [200, 302]:
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
     
     return response
 
