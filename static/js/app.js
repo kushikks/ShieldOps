@@ -712,33 +712,3 @@ function showNotification(title, message, type = 'info') {
     }, 5000);
 }
 
-// Broadcast Listener
-const broadcastBtn = document.getElementById('broadcastBtn');
-if (broadcastBtn) {
-    broadcastBtn.addEventListener('click', async () => {
-        const message = document.getElementById('broadcastMessage').value;
-        const pop = currentSimulation ? currentSimulation.population : 'all';
-        
-        broadcastBtn.disabled = true;
-        broadcastBtn.innerHTML = '<span class="spinner"></span> Transmitting...';
-        
-        try {
-            const response = await fetch(`${API_BASE}/api/broadcast`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ message: message, population: pop })
-            });
-            const data = await response.json();
-            if (response.ok) {
-                showNotification('Broadcast Success', `Emergency SMS sent to ~${data.recipients} devices in the impact zone.`, 'success');
-            } else {
-                showNotification('Broadcast Failed', data.error, 'danger');
-            }
-        } catch (err) {
-            showNotification('Broadcast Error', 'Failed to connect to Twilio Gateway.', 'danger');
-        } finally {
-            broadcastBtn.disabled = false;
-            broadcastBtn.innerHTML = 'Send SMS Alerts via Twilio';
-        }
-    });
-};
