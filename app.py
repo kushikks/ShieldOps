@@ -71,11 +71,10 @@ def process_response(response):
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     
-    # Modern site isolation and permissions
-    response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
-    response.headers['Cross-Origin-Embedder-Policy'] = 'require-corp'
+    # Relaxed security headers to allow external map tiles (OpenStreetMap)
+    response.headers['Permissions-Policy'] = 'geolocation=(self), microphone=(), camera=()'
+    # Removed require-corp as it blocks external tile servers without CORP headers
     response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
-    response.headers['Cross-Origin-Resource-Policy'] = 'same-origin'
 
     # Content Security Policy
     csp = (

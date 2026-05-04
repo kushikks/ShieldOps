@@ -31,39 +31,46 @@ class AIRecommendationService:
                 import google.generativeai as genai
                 genai.configure(api_key=self.gemini_api_key)
                 
-                # List available models to find the right one
+                # List available models to find the right ones
                 print("[AI Service] Checking available models...")
+                self.available_gemini_models = []
                 try:
-                    available_models = []
                     for model in genai.list_models():
                         if 'generateContent' in model.supported_generation_methods:
-                            available_models.append(model.name)
+                            self.available_gemini_models.append(model.name)
                             print(f"[AI Service]   - {model.name}")
                     
-                    # Try to use the first available model that supports generateContent
-                    if available_models:
-                        # Prefer gemini-1.5-flash, then gemini-1.5-pro, then gemini-pro, then first available
-                        model_name = None
-                        for preferred in ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-pro']:
-                            if preferred in available_models:
-                                model_name = preferred
-                                break
-                        
-                        if not model_name:
-                            model_name = available_models[0]
-                        
-                        print(f"[AI Service] Using model: {model_name}")
-                        self.gemini_model = genai.GenerativeModel(model_name)
-                        print("[AI Service] ✓ Gemini model initialized successfully")
-                    else:
+                    if not self.available_gemini_models:
                         print("[AI Service] ✗ No models support generateContent")
                         self.gemini_model = None
-                except Exception as list_error:
-                    print(f"[AI Service] Could not list models: {list_error}")
-                    # Fallback to trying gemini-pro directly
-                    self.gemini_model = genai.GenerativeModel('gemini-pro')
-                    print("[AI Service] ✓ Gemini model initialized (fallback)")
+                        return
+
+                    # Define preference order
+                    self.preferred_models = [
+                        'models/gemini-2.0-flash',
+                        'models/gemini-1.5-flash',
+                        'models/gemini-1.5-pro',
+                        'models/gemini-pro'
+                    ]
                     
+                    # Find the first preferred model that is actually available
+                    self.current_model_index = -1
+                    for i, preferred in enumerate(self.preferred_models):
+                        if preferred in self.available_gemini_models:
+                            self.current_model_name = preferred
+                            self.current_model_index = i
+                            break
+                    
+                    if self.current_model_index == -1:
+                        self.current_model_name = self.available_gemini_models[0]
+                    
+                    print(f"[AI Service] Selected primary model: {self.current_model_name}")
+                    self.gemini_model = genai.GenerativeModel(self.current_model_name)
+                    print("[AI Service] ✓ Gemini model initialized successfully")
+                    
+                except Exception as e:
+                    print(f"[AI Service] ✗ Error listing models: {e}")
+                    self.gemini_model = None
             except ImportError as e:
                 print(f"[AI Service] ✗ Import error: {e}")
                 print("Warning: google-generativeai package not installed. Install with: pip install google-generativeai")
@@ -290,14 +297,16 @@ CRITICAL REQUIREMENTS:
         return prompt
     
     def _generate_with_gemini(self, prompt: str) -> str:
-        """Generate recommendation using Google Gemini API"""
+        """Generate recommendation using Google Gemini API with automatic model rotation for 403 errors"""
+        import google.generativeai as genai
+        
         try:
-            print("[AI Service] Calling Gemini API...")
+            print(f"[AI Service] Calling Gemini API with model {self.current_model_name}...")
             response = self.gemini_model.generate_content(
                 prompt,
                 generation_config={
                     'temperature': 0.7,
-                    'max_output_tokens': 4096,  # Maximum allowed for comprehensive complete responses
+                    'max_output_tokens': 4096,
                     'top_p': 0.95,
                 }
             )
@@ -306,6 +315,33 @@ CRITICAL REQUIREMENTS:
             return response.text.strip()
         
         except Exception as e:
+            # If 403 Permission Denied, try the next available model in the preference list
+            if "403" in str(e) or "PermissionDenied" in type(e).__name__:
+                print(f"[AI Service] ✗ Gemini 403 Error with {self.current_model_name}")
+                
+                # Try to find the next model to use
+                next_index = self.current_model_index + 1
+                while next_index < len(self.preferred_models):
+                    next_model = self.preferred_models[next_index]
+                    if next_model in self.available_gemini_models:
+                        print(f"[AI Service] ↺ Rotating to next model: {next_model}")
+                        self.current_model_name = next_model
+                        self.current_model_index = next_index
+                        self.gemini_model = genai.GenerativeModel(self.current_model_name)
+                        # Recursive call to try with the new model
+                        return self._generate_with_gemini(prompt)
+                    next_index += 1
+                
+                # If we've exhausted preferred models, try any remaining available models
+                for model in self.available_gemini_models:
+                    if model not in self.preferred_models:
+                        print(f"[AI Service] ↺ Trying alternative available model: {model}")
+                        self.current_model_name = model
+                        self.gemini_model = genai.GenerativeModel(self.current_model_name)
+                        # Prevent infinite loop by removing it from available list
+                        self.available_gemini_models.remove(model)
+                        return self._generate_with_gemini(prompt)
+
             print(f"[AI Service] ✗ Gemini API error: {type(e).__name__}: {e}")
             raise
     
