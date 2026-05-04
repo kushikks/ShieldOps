@@ -24,8 +24,8 @@ from ai_service import get_ai_service
 app = Flask(__name__)
 CORS(app)
 
-app.config['SECRET_KEY'] = 'shieldops_secret_key_123'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///shieldops.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or os.urandom(32)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///shieldops.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
