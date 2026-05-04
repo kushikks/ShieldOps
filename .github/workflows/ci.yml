@@ -73,8 +73,8 @@ jobs:
       - name: Dependency Scan - Safety Scan (Quality Gate)
         run: |
           pip install "safety<3.0.0"
-          # Safety < 3.0 uses --json flag and shell redirection for output files
-          safety check --json > safety-report.json
+          # Scan requirements.txt specifically to avoid runner-preinstalled package noise
+          safety check -r requirements.txt --json > safety-report.json
 
       - name: Filesystem Scan - Trivy (Generate Report)
         uses: aquasecurity/trivy-action@master
