@@ -31,8 +31,13 @@ def test_fallback_recommendation():
     )
     
     assert recommendation is not None
-    assert len(recommendation) > 0
-    assert 'earthquake' in recommendation.lower() or 'rescue' in recommendation.lower()
+    assert len(recommendation) > 50  # Should be a substantial response
+    # The response must contain action-oriented language regardless of AI or fallback mode
+    lower = recommendation.lower()
+    assert any(word in lower for word in [
+        'action', 'deploy', 'evacuate', 'emergency', 'critical',
+        'earthquake', 'rescue', 'response', 'immediate', 'medical'
+    ]), f"Recommendation does not contain expected emergency response language: {recommendation[:200]}"
 
 
 def test_prompt_building():
@@ -45,6 +50,8 @@ def test_prompt_building():
         population=10000,
         risk_score=65.0,
         priority='MEDIUM',
+        lat=35.6762,
+        lng=139.6503,
         medical_resources={'hospital_status': 'moderate', 'doctor_availability': 'adequate'},
         water_food_resources={'water_supply': 'critical', 'food_supply': 'moderate'},
         logistics_resources={'transport_status': 'limited', 'communication_status': 'normal'},
