@@ -87,11 +87,14 @@ def after_request(response):
     response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
     response.headers['Cross-Origin-Resource-Policy'] = 'same-origin'
     
-    # Cache control for all pages and assets to resolve ZAP "Non-Storable Content" warning
-    if response.status_code in [200, 302, 304]:
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
+    # Universal Cache Control to resolve ZAP "Non-Storable Content" warning [10049]
+    # Apply to ALL responses regardless of status code
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    
+    # HSTS (Strict-Transport-Security)
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     
     return response
 
