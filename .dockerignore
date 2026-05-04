@@ -12,3 +12,7 @@ htmlcov/
 .env
 .vscode/
 *.log
+instance/
+*.db
+report_*.*
+zap_reports/

@@ -1,327 +1,112 @@
-# 🛡️ ShieldOps - Disaster Response Intelligence System
-
-A comprehensive **Disaster Response Simulation & Decision Intelligence Dashboard** with a complete **DevSecOps CI/CD pipeline**.
-
-## 📋 Project Overview
-
-ShieldOps is a decision-support system that simulates disaster scenarios and provides:
-- **Risk Assessment**: Calculates risk scores based on severity and population impact
-- **Priority Classification**: Categorizes disasters as LOW, MEDIUM, or HIGH priority
-- **Action Recommendations**: Provides specific response strategies for each disaster type
-- **Visual Dashboard**: Interactive web interface with real-time insights
-- **Automated Pipeline**: Complete CI/CD with security scanning and testing
-
-## 🏗️ Architecture
-
-### Application Stack
-- **Backend**: Python Flask REST API
-- **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
-- **Containerization**: Docker
-- **Testing**: Pytest with coverage
-- **CI/CD**: GitHub Actions
-
-### System Flow
-```
-User Input → API Processing → Risk Calculation → Priority Determination → Response Generation
-```
-
-## 🚀 Features
-
-### Core Functionality
-- ✅ 8 Disaster Types (Flood, Earthquake, Fire, Cyclone, Tsunami, Landslide, Drought, Epidemic)
-- ✅ Deterministic Risk Calculation
-- ✅ Real-time Health Monitoring
-- ✅ Simulation History Tracking
-- ✅ Input Validation & Error Handling
-
-### Dashboard Features
-- 🎨 Modern, Responsive UI
-- 📊 Visual Risk Gauge
-- 🎯 Priority Badges with Color Coding
-- 📈 Risk Meter Visualization
-- 📜 Simulation History Display
-- 🟢 Live System Status Indicator
-
-## 🔧 Local Development
-
-### Prerequisites
-- Python 3.11
-- pip
-- Virtual environment
-
-### Setup Instructions
-
-1. **Clone the repository**
-```bash
-git clone https://github.com/kushikks/ShieldOps.git
-cd ShieldOps
-```
-
-2. **Create virtual environment**
-```bash
-python3.11 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. **Install dependencies**
-```bash
-pip install -r requirements.txt
-```
-
-4. **Run the application**
-```bash
-python app.py
-```
-
-5. **Access the dashboard**
-```
-http://localhost:5000
-```
-
-### Running Tests
-```bash
-# Run all tests
-pytest test_app.py -v
-
-# Run with coverage
-pytest test_app.py --cov=app --cov-report=html
-```
-
-## 🐳 Docker Deployment
-
-### Build Image
-```bash
-docker build -t shieldops:latest .
-```
-
-### Run Container
-```bash
-docker run -d -p 5000:5000 --name shieldops-app shieldops:latest
-```
-
-### Health Check
-```bash
-curl http://localhost:5000/health
-```
-
-## 📡 API Endpoints
-
-### Health Check
-```http
-GET /health
-```
-Returns system health status
-
-### Simulate Disaster
-```http
-POST /api/simulate
-Content-Type: application/json
-
-{
-  "disaster_type": "flood",
-  "severity": 7,
-  "population": 50000
-}
-```
-
-**Response:**
-```json
-{
-  "disaster_type": "flood",
-  "severity": 7,
-  "population": 50000,
-  "risk_score": 80.5,
-  "priority": "HIGH",
-  "recommendation": "Deploy rescue boats, establish evacuation centers...",
-  "timestamp": "2024-01-15T10:30:00"
-}
-```
-
-### Get History
-```http
-GET /api/history
-```
-Returns simulation history
-
-### Get Disaster Types
-```http
-GET /api/disasters
-```
-Returns available disaster types
-
-## 🔐 DevSecOps Pipeline
-
-### Pipeline Stages
-
-1. **Build Stage**
-   - Docker image creation
-   - Artifact generation
-
-2. **Test Stage**
-   - Unit tests (19 test cases)
-   - Coverage analysis
-   - Validation testing
-
-3. **Deploy Stage**
-   - Container deployment
-   - Status verification
-
-4. **Health Check Stage**
-   - Endpoint validation
-   - Response verification
-
-5. **Functional Testing Stage**
-   - API endpoint testing
-   - All disaster types validation
-   - Input validation testing
-   - History tracking verification
-
-6. **Security Scanning Stage**
-   - SAST (Semgrep)
-   - Dependency scanning (Safety)
-   - Container scanning (Trivy)
-
-7. **DAST Stage**
-   - Placeholder for dynamic testing
-   - Ready for OWASP ZAP integration
-
-8. **Pipeline Summary**
-   - Artifact collection
-   - Status reporting
-
-### Pipeline Triggers
-- Push to `main` or `develop` branches
-- Pull requests to `main`
-
-### Artifacts Generated
-- Docker images
-- Test coverage reports
-- Security scan reports
-- Pipeline logs
-
-## 🧪 Testing Strategy
-
-### Test Coverage
-- ✅ Health check validation
-- ✅ Risk calculation logic
-- ✅ All disaster type simulations
-- ✅ Input validation (positive & negative cases)
-- ✅ Edge cases and boundary conditions
-- ✅ Deterministic behavior verification
-- ✅ History tracking
-- ✅ API endpoint functionality
-
-### Test Categories
-1. **Functional Tests**: Core feature validation
-2. **Scenario Tests**: Different disaster simulations
-3. **Failure Tests**: Error handling and validation
-4. **Edge Case Tests**: Boundary conditions
-
-## 📊 Risk Calculation Logic
-
-### Formula
-```
-risk_score = (severity × 10) + (population_factor × 0.5)
-```
-
-### Population Factors
-- < 1,000: Factor 10
-- 1,000 - 10,000: Factor 30
-- 10,000 - 100,000: Factor 60
-- > 100,000: Factor 90
-
-### Priority Levels
-- **HIGH**: Risk Score ≥ 70
-- **MEDIUM**: Risk Score 40-69
-- **LOW**: Risk Score < 40
-
-## 🎯 Project Goals Achieved
-
-✅ **Runnable Application**: Fully functional web dashboard
-✅ **Structured System**: Clear input → processing → output flow
-✅ **Container-Ready**: Dockerized with health checks
-✅ **Complete CI/CD**: 8-stage automated pipeline
-✅ **Comprehensive Testing**: 19 test cases with 100% pass rate
-✅ **Security Integration**: SAST, dependency, and container scanning
-✅ **DevSecOps Principles**: Security integrated throughout pipeline
-✅ **Deterministic Logic**: Consistent, testable outputs
-✅ **Professional Quality**: Production-ready code structure
-
-## 📁 Project Structure
-
-```
-ShieldOps/
-├── .github/
-│   └── workflows/
-│       └── ci.yml              # CI/CD pipeline
-├── static/
-│   ├── css/
-│   │   └── style.css           # Dashboard styles
-│   └── js/
-│       └── app.js              # Frontend logic
-├── templates/
-│   └── index.html              # Dashboard HTML
-├── app.py                      # Flask application
-├── test_app.py                 # Test suite
-├── Dockerfile                  # Container definition
-├── requirements.txt            # Python dependencies
-├── .dockerignore              # Docker ignore rules
-└── README.md                   # Documentation
-```
-
-## 🔒 Security Features
-
-- Input validation and sanitization
-- Error handling without information leakage
-- CORS configuration
-- Health check endpoints
-- Automated security scanning
-- Dependency vulnerability checks
-- Container security scanning
-
-## 🚦 Pipeline Status
-
-The pipeline ensures:
-- ✅ Code builds successfully
-- ✅ All tests pass
-- ✅ Application deploys correctly
-- ✅ Health checks succeed
-- ✅ Functional tests validate behavior
-- ✅ Security scans complete
-- ✅ Artifacts are generated
-
-## 📈 Future Enhancements
-
-- [ ] Machine Learning integration for better predictions
-- [ ] Real-time data integration
-- [ ] Multi-language support
-- [ ] Advanced visualization (charts, maps)
-- [ ] User authentication
-- [ ] Database persistence
-- [ ] OWASP ZAP DAST implementation
-- [ ] Performance testing
-- [ ] Load testing
-
-## 👥 Contributors
-
-- **Kushi** - DevOps & CI/CD Implementation
-
-## 📄 License
-
-This project is created for educational purposes.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
-
-## 📞 Support
-
-For issues or questions, please open an issue on GitHub.
+# ShieldOps - DevOps-Enabled Disaster Response Simulation
+
+**Team ShieldOps**
+- **Manya Ravishankar** – 1MS23CS227
+- **Kushi Kaveramma K S** – 1MS23CS095
 
 ---
 
-**Built with ❤️ using DevSecOps principles**
+## 🚀 Project Overview
+**ShieldOps** is a comprehensive disaster management simulation and decision intelligence platform. It empowers emergency responders and planners to simulate various disaster scenarios (Floods, Earthquakes, Fires, etc.), evaluate risks using a context-aware scoring engine, and receive AI-powered actionable recommendations.
+
+The project is built with a **DevOps-first mindset**, featuring fully automated CI/CD pipelines, container orchestration, multi-layered security scanning, and proactive monitoring.
+
+## ⚠️ Problem Statement
+In the immediate aftermath of a disaster, decision-makers often lack clear, data-driven insights into resource allocation and priority areas. Existing systems are often siloed, lacking the integration of real-time situational updates and automated security assurance. ShieldOps solves this by providing a unified, secure, and resilient intelligence system that grows more effective with each simulation.
+
+## ✨ Key Features
+- **Multi-Hazard Simulation:** Support for 8 distinct disaster types with location-aware parameters.
+- **Explainable Risk Scoring:** A weighted intelligence engine that accounts for medical, water/food, logistics, and emergency resource gaps.
+- **AI-Powered Recommendations:** Integration with Google Gemini for generating detailed, situation-specific response plans.
+- **Interactive Geospatial View:** Leaflet-based map integration for precise disaster location tagging.
+- **Situation Re-evaluation:** Compare original assessments with post-intervention data to track situational improvement.
+- **Intelligence Insights:** A learning engine that analyzes historical patterns to provide predictive response trends.
+- **Health & Metrics:** Native support for Prometheus scraping and system health monitoring.
+
+## 🛠️ Tech Stack
+- **Backend:** Flask (Python 3.12), SQLAlchemy (SQLite)
+- **Frontend:** Vanilla HTML5, CSS3 (Glassmorphism UI), JavaScript (ES6)
+- **Maps:** Leaflet.js
+- **AI:** Google Gemini API (with resilient model rotation)
+- **Containerization:** Docker, Docker Compose
+- **Monitoring:** Prometheus, Grafana
+- **Testing:** Pytest
+
+## 🛡️ DevOps & Security Pipeline
+The project features a robust **GitHub Actions CI/CD pipeline** with the following quality gates:
+
+1.  **Build & Unit Testing:** Automated execution of 65+ test cases using `pytest`.
+2.  **SAST (Static Analysis):** Code quality and security checks using `Semgrep`.
+3.  **SCA (Dependency Scanning):** Auditing of Python packages for known vulnerabilities via `Safety`.
+4.  **FS Scan:** Container filesystem and configuration scanning using `Trivy`.
+5.  **DAST (Dynamic Analysis):** Automated web application vulnerability scanning using `OWASP ZAP`.
+
+## 📊 Monitoring Setup
+- **Prometheus:** Scrapes application metrics (Request counts, latency, health status) from `/metrics`.
+- **Grafana:** Visualizes metrics through pre-configured dashboards.
+
+---
+
+## 🚀 Installation & Setup
+
+### 1. Local Environment Setup
+```bash
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure Environment
+cp .env.example .env
+# Edit .env with your GEMINI_API_KEY and SECRET_KEY
+
+# Run Application
+python app.py
+```
+*App will be available at: http://localhost:5000*
+
+### 2. Docker Execution
+```bash
+# Build and run with Docker Compose
+docker compose up --build -d
+```
+- **ShieldOps App:** http://localhost:5000
+- **Prometheus:** http://localhost:9090
+- **Grafana:** http://localhost:3000
+- **Metrics Endpoint:** http://localhost:5000/metrics
+
+---
+
+## 📂 Project Structure
+```text
+ShieldOps/
+├── app.py                # Main Flask Application
+├── models.py             # Database Models
+├── ai_service.py         # Gemini/Ollama Integration
+├── requirements.txt      # Dependency List
+├── Dockerfile            # Container Specification
+├── docker-compose.yml    # Service Orchestration
+├── prometheus.yml        # Monitoring Config
+├── zap.conf              # DAST Policy
+├── .env.example          # Environment Template
+├── static/               # CSS, JS, and Images
+├── templates/            # HTML Views
+├── tests/                # Unit and Integration Tests
+├── docs/                 # Audit and Architecture Documentation
+└── .github/workflows/    # CI/CD Configuration
+```
+
+## 📸 Screenshots
+*[Add screenshots here: Dashboard, Simulation Results, Comparison View, Grafana Dashboard]*
+
+---
+
+## 🤝 Contributors
+- **Kushi Kaveramma K S** (1MS23CS095)
+- **Manya Ravishankar** (1MS23CS227)
+
+---
+*Developed for the DevOps Project Curriculum.*
