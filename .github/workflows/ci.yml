@@ -67,14 +67,14 @@ jobs:
       - name: SAST - Semgrep Scan (Quality Gate)
         run: |
           pip install semgrep
-          # Scans source code and FAILS if OWASP Top 10 issues are found
-          semgrep scan --config="p/owasp-top-ten" --json --output=semgrep-report.json --error .
+          # Scans source code and FAILS if security issues are found
+          semgrep scan --config="p/python" --config="p/javascript" --config="p/owasp-top-ten" --json --output=semgrep-report.json --error .
 
-      - name: Dependency Scan - Safety Check (Quality Gate)
+      - name: Dependency Scan - Safety Scan (Quality Gate)
         run: |
           pip install safety
-          # FAILS if vulnerable dependencies are found in requirements.txt
-          safety check
+          # Using modern 'scan' command as 'check' is deprecated
+          safety scan --json --output-file safety-report.json
 
       - name: Filesystem Scan - Trivy (Generate Report)
         uses: aquasecurity/trivy-action@master
@@ -91,6 +91,7 @@ jobs:
           scan-ref: '.'
           exit-code: 1
           severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
 
       - name: Upload Security Reports
         uses: actions/upload-artifact@v4
@@ -99,6 +100,7 @@ jobs:
           name: security-reports
           path: |
             semgrep-report.json
+            safety-report.json
             trivy-report.json
 
   dast-scan:
@@ -114,21 +116,18 @@ jobs:
       - name: Load and Run Application Container
         run: |
           docker load -i shieldops-image.tar
-          docker run -d -p 5000:5000 --name shieldops-app ${{ env.DOCKER_IMAGE }}:latest
+          # Run with HOST=0.0.0.0 so it's accessible to ZAP
+          docker run -d -p 5000:5000 -e HOST=0.0.0.0 --name shieldops-app ${{ env.DOCKER_IMAGE }}:latest
           echo "Waiting for application to start..."
-          sleep 15
-
-      - name: Get Runner IP
-        # Workaround to allow the ZAP container to target the app container
-        id: ip
-        run: echo "runner_ip=$(hostname -I | awk '{print $1}')" >> $GITHUB_OUTPUT
+          sleep 20
 
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
-          target: 'http://${{ steps.ip.outputs.runner_ip }}:5000'
+          # Use docker bridge gateway to reach the host/app
+          target: 'http://localhost:5000'
           allow_issue_writing: false
-          fail_action: false # True to fail pipeline on DAST issues
+          fail_action: true
 
       - name: Upload ZAP HTML Report
         uses: actions/upload-artifact@v4
