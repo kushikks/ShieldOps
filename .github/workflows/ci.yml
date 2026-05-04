@@ -112,7 +112,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: docker-image
-
       - name: Load and Run Application Container
         run: |
           docker load -i shieldops-image.tar
@@ -121,11 +120,19 @@ jobs:
           echo "Waiting for application to start..."
           sleep 20
 
+      - name: Get Runner IP
+        id: ip
+        run: echo "runner_ip=$(hostname -I | awk '{print $1}')" >> $GITHUB_OUTPUT
+
+      - name: Fix permissions for ZAP
+        run: |
+          # ZAP container runs as UID 1000, needs write access to workspace
+          sudo chmod -R 777 .
+
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
-          # Use docker bridge gateway to reach the host/app
-          target: 'http://localhost:5000'
+          target: 'http://${{ steps.ip.outputs.runner_ip }}:5000'
           allow_issue_writing: false
           fail_action: true
 
