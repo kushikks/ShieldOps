@@ -42,8 +42,11 @@ def load_user(user_id):
 with app.app_context():
     db.create_all()
 
-# Prometheus Metrics
-REQUEST_COUNT = Counter('app_request_count', 'Total number of requests', ['method', 'endpoint', 'http_status'])
+# Security Configuration
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching for all assets
+
+# Metrics
+REQUEST_COUNT = Counter('http_requests_total', 'Total HTTP Requests', ['method', 'endpoint', 'http_status'])
 REQUEST_LATENCY = Histogram('app_request_latency_seconds', 'Request latency in seconds', ['method', 'endpoint'])
 APP_HEALTH = Gauge('app_health_status', 'Application health status (1 = healthy, 0 = unhealthy)')
 
@@ -62,12 +65,21 @@ def after_request(response):
         REQUEST_COUNT.labels(method=request.method, endpoint=endpoint, http_status=response.status_code).inc()
         REQUEST_LATENCY.labels(method=request.method, endpoint=endpoint).observe(latency)
         
-    # Add security headers for OWASP ZAP / DAST compliance
+@app.after_request
+def add_security_headers(response):
+    # Standard security headers
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     
-    # Comprehensive Content Security Policy
+    # Modern site isolation and permissions
+    response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+    response.headers['Cross-Origin-Embedder-Policy'] = 'require-corp'
+    response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
+    response.headers['Cross-Origin-Resource-Policy'] = 'same-origin'
+
+    # Content Security Policy (Remove unsafe-inline script completely)
     csp = (
         "default-src 'self'; "
         "script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; "
@@ -80,21 +92,11 @@ def after_request(response):
         "form-action 'self';"
     )
     response.headers['Content-Security-Policy'] = csp
-    
-    # Modern security headers to resolve ZAP warnings
-    response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
-    response.headers['Cross-Origin-Embedder-Policy'] = 'require-corp'
-    response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
-    response.headers['Cross-Origin-Resource-Policy'] = 'same-origin'
-    
-    # Universal Cache Control to resolve ZAP "Non-Storable Content" warning [10049]
-    # Apply to ALL responses regardless of status code
+
+    # Universal Cache Control (Resolves ZAP 10049)
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
-    
-    # HSTS (Strict-Transport-Security)
-    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     
     return response
 

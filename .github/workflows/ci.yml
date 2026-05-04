@@ -129,17 +129,22 @@ jobs:
           # ZAP container runs as UID 1000, needs write access to workspace
           sudo chmod -R 777 .
 
-      - name: OWASP ZAP Baseline Scan
-        uses: zaproxy/action-baseline@v0.12.0
-        with:
-          target: 'http://${{ steps.ip.outputs.runner_ip }}:5000'
-          rules_file_name: 'zap.conf'
-          allow_issue_writing: false
-          fail_action: false # Allow warnings to pass while keeping the report
+      - name: OWASP ZAP Baseline Scan (Direct Docker)
+        run: |
+          # Direct docker run ensures correct path resolution for zap.conf and ignores internal action bugs
+          docker run --network=host -v $(pwd):/zap/wrk/:rw -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+            -t http://${{ steps.ip.outputs.runner_ip }}:5000 \
+            -c zap.conf \
+            -J report_json.json \
+            -w report_md.md \
+            -r report_html.html || true
 
-      - name: Upload ZAP HTML Report
+      - name: Upload ZAP Security Reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: zap-report
-          path: report_html.html
+          name: zap-reports
+          path: |
+            report_html.html
+            report_json.json
+            report_md.md
