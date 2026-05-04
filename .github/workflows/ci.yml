@@ -72,9 +72,9 @@ jobs:
 
       - name: Dependency Scan - Safety Scan (Quality Gate)
         run: |
-          pip install safety
-          # Using modern 'scan' command as 'check' is deprecated
-          safety scan --json --output-file safety-report.json
+          pip install "safety<3.0.0"
+          # Safety < 3.0 uses 'check' command and doesn't require interactive login
+          safety check --json --output safety-report.json
 
       - name: Filesystem Scan - Trivy (Generate Report)
         uses: aquasecurity/trivy-action@master
