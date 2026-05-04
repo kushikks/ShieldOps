@@ -57,16 +57,14 @@ def before_request():
     request.start_time = time.time()
 
 @app.after_request
-def after_request(response):
+def process_response(response):
+    # Metrics collection
     if request.path != '/metrics':
         latency = time.time() - getattr(request, 'start_time', time.time())
         endpoint = request.endpoint or request.path
-        
         REQUEST_COUNT.labels(method=request.method, endpoint=endpoint, http_status=response.status_code).inc()
         REQUEST_LATENCY.labels(method=request.method, endpoint=endpoint).observe(latency)
-        
-@app.after_request
-def add_security_headers(response):
+    
     # Standard security headers
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
@@ -79,7 +77,7 @@ def add_security_headers(response):
     response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
     response.headers['Cross-Origin-Resource-Policy'] = 'same-origin'
 
-    # Content Security Policy (Remove unsafe-inline script completely)
+    # Content Security Policy
     csp = (
         "default-src 'self'; "
         "script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; "
