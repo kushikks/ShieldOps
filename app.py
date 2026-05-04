@@ -8,6 +8,8 @@ from flask_cors import CORS
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+import time
 
 # Load environment variables
 load_dotenv()
@@ -17,6 +19,28 @@ from ai_service import get_ai_service
 
 app = Flask(__name__)
 CORS(app)
+
+# Prometheus Metrics
+REQUEST_COUNT = Counter('app_request_count', 'Total number of requests', ['method', 'endpoint', 'http_status'])
+REQUEST_LATENCY = Histogram('app_request_latency_seconds', 'Request latency in seconds', ['method', 'endpoint'])
+APP_HEALTH = Gauge('app_health_status', 'Application health status (1 = healthy, 0 = unhealthy)')
+
+APP_HEALTH.set(1.0) # Assume healthy at startup
+
+@app.before_request
+def before_request():
+    request.start_time = time.time()
+
+@app.after_request
+def after_request(response):
+    if request.path != '/metrics':
+        latency = time.time() - getattr(request, 'start_time', time.time())
+        endpoint = request.endpoint or request.path
+        
+        REQUEST_COUNT.labels(method=request.method, endpoint=endpoint, http_status=response.status_code).inc()
+        REQUEST_LATENCY.labels(method=request.method, endpoint=endpoint).observe(latency)
+        
+    return response
 
 # Disaster response logic
 DISASTER_ACTIONS = {
@@ -546,6 +570,12 @@ def enhance_recommendation(base_recommendation, resources, infrastructure, prior
         enhanced += " | " + " | ".join(recommendations)
     
     return enhanced
+
+
+@app.route('/metrics')
+def metrics():
+    """Prometheus metrics endpoint"""
+    return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
 
 @app.route('/')
