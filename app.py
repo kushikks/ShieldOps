@@ -22,7 +22,8 @@ from models import db, User, Simulation
 from ai_service import get_ai_service
 
 app = Flask(__name__)
-CORS(app)
+# Restrict CORS to API routes and specific options for security
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or os.urandom(32)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///shieldops.db')
@@ -61,6 +62,12 @@ def after_request(response):
         REQUEST_COUNT.labels(method=request.method, endpoint=endpoint, http_status=response.status_code).inc()
         REQUEST_LATENCY.labels(method=request.method, endpoint=endpoint).observe(latency)
         
+    # Add security headers for OWASP ZAP / DAST compliance
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.tile.openstreetmap.org https://unpkg.com; connect-src 'self' https://*.googleapis.com;"
+    
     return response
 
 # Disaster response logic
@@ -1079,4 +1086,6 @@ def get_resource_options():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    # Bind to 127.0.0.1 by default for security, use HOST=0.0.0.0 for Docker
+    host = os.environ.get('HOST', '127.0.0.1')
+    app.run(host=host, port=port, debug=False)

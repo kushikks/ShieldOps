@@ -226,30 +226,45 @@
             }
         });
 
-        // Add a toggle link right above the login button
-        const form = document.getElementById('loginForm');
-        form.insertAdjacentHTML('beforeend', '<p id="toggle-auth" style="text-align:center; cursor:pointer; color:var(--primary); font-size:14px; margin-top:10px;">Need an account? Register here.</p>');
-        document.getElementById('toggle-auth').addEventListener('click', (e) => {
+        const toggleLink = document.createElement('p');
+        toggleLink.id = 'toggle-auth';
+        toggleLink.style.cssText = 'text-align:center; cursor:pointer; color:var(--primary); font-size:14px; margin-top:10px;';
+        toggleLink.textContent = 'Need an account? Register here.';
+        form.appendChild(toggleLink);
+
+        toggleLink.addEventListener('click', (e) => {
             const btn = form.querySelector('.login-btn');
             if(btn.innerText === 'Login') {
                 btn.innerText = 'Register';
-                e.target.innerText = 'Already have an account? Login here.';
+                e.target.textContent = 'Already have an account? Login here.';
             } else {
                 btn.innerText = 'Login';
-                e.target.innerText = 'Need an account? Register here.';
+                e.target.textContent = 'Need an account? Register here.';
             }
         });
 
         // SOS button
         document.getElementById('sosButton').addEventListener('click', () => {
             const sosBtn = document.getElementById('sosButton');
-            sosBtn.classList.add('sos-active');
-            sosBtn.innerHTML = `
-                <svg class="sos-icon sos-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
-                </svg>
-                <span>Deploying Help...</span>
-            `;
+        sosBtn.classList.add('sos-active');
+        sosBtn.innerHTML = ''; // Clear
+        
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('class', 'sos-icon sos-pulse');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('stroke-width', '2');
+        
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', 'M22 12h-4l-3 9L9 3l-3 9H2');
+        svg.appendChild(path);
+        
+        const text = document.createElement('span');
+        text.textContent = 'Deploying Help...';
+        
+        sosBtn.appendChild(svg);
+        sosBtn.appendChild(text);
             
             // Show notification
             showNotification('SOS Alert', 'Emergency help is being deployed to your location. Stay safe!', 'warning');
@@ -287,15 +302,29 @@
                 animation: slideIn 0.3s ease;
             `;
             
-            notification.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: start; gap: 12px;">
-                    <div>
-                        <strong style="display: block; margin-bottom: 4px; color: var(--text-primary);">${title}</strong>
-                        <p style="margin: 0; color: var(--text-secondary); font-size: 14px;">${message}</p>
-                    </div>
-                    <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 20px; padding: 0; line-height: 1;">×</button>
-                </div>
-            `;
+            const content = document.createElement('div');
+            content.style.cssText = 'display: flex; justify-content: space-between; align-items: start; gap: 12px;';
+            
+            const textContent = document.createElement('div');
+            const titleStrong = document.createElement('strong');
+            titleStrong.style.cssText = 'display: block; margin-bottom: 4px; color: var(--text-primary);';
+            titleStrong.textContent = title;
+            
+            const messageP = document.createElement('p');
+            messageP.style.cssText = 'margin: 0; color: var(--text-secondary); font-size: 14px;';
+            messageP.textContent = message;
+            
+            textContent.appendChild(titleStrong);
+            textContent.appendChild(messageP);
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.style.cssText = 'background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 20px; padding: 0; line-height: 1;';
+            closeBtn.textContent = '×';
+            closeBtn.onclick = () => notification.remove();
+            
+            content.appendChild(textContent);
+            content.appendChild(closeBtn);
+            notification.appendChild(content);
             
             document.body.appendChild(notification);
             

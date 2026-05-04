@@ -1,3 +1,16 @@
+/**
+ * ShieldOps - Disaster Simulation Dashboard
+ * Core Frontend Logic
+ */
+
+// Helper to escape HTML and prevent XSS
+function escapeHTML(str) {
+    if (!str) return '';
+    const p = document.createElement('p');
+    p.textContent = str;
+    return p.innerHTML;
+}
+
 // ShieldOps Frontend Application
 const API_BASE = window.location.origin;
 
@@ -420,13 +433,26 @@ function displayHistory(history) {
         const historyItem = document.createElement('div');
         historyItem.className = 'history-item';
 
-        historyItem.innerHTML = `
-            <div class="history-item-header">
-                <span class="history-disaster">${item.disaster_type}</span>
-                <span class="history-priority ${item.priority.toLowerCase()}">${item.priority}</span>
-            </div>
-            <div class="history-risk">Risk: ${item.risk_score.toFixed(1)}</div>
-        `;
+        const header = document.createElement('div');
+        header.className = 'history-item-header';
+        
+        const disaster = document.createElement('span');
+        disaster.className = 'history-disaster';
+        disaster.textContent = item.disaster_type;
+        
+        const priority = document.createElement('span');
+        priority.className = `history-priority ${item.priority.toLowerCase()}`;
+        priority.textContent = item.priority;
+        
+        header.appendChild(disaster);
+        header.appendChild(priority);
+        
+        const risk = document.createElement('div');
+        risk.className = 'history-risk';
+        risk.textContent = `Risk: ${item.risk_score.toFixed(1)}`;
+        
+        historyItem.appendChild(header);
+        historyItem.appendChild(risk);
 
         historyItem.style.cursor = 'pointer';
         historyItem.addEventListener('click', () => {
@@ -687,13 +713,28 @@ function showNotification(title, message, type = 'info') {
     // Create notification element
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
-        <div class="notification-header">
-            <strong>${title}</strong>
-            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
-        </div>
-        <div class="notification-body">${message.replace(/\n/g, '<br>')}</div>
-    `;
+    
+    const header = document.createElement('div');
+    header.className = 'notification-header';
+    
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = title;
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'notification-close';
+    closeBtn.textContent = '×';
+    closeBtn.onclick = () => notification.remove();
+    
+    header.appendChild(titleEl);
+    header.appendChild(closeBtn);
+    
+    const body = document.createElement('div');
+    body.className = 'notification-body';
+    // Safely inject text with line breaks
+    body.innerHTML = escapeHTML(message).replace(/\n/g, '<br>');
+    
+    notification.appendChild(header);
+    notification.appendChild(body);
 
     // Add to page
     let container = document.getElementById('notificationContainer');
