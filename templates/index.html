@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShieldOps - Disaster Response Intelligence</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Leaflet CSS and JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
 <body>
     <div class="container">
@@ -79,6 +82,14 @@
                     <div class="form-group">
                         <label for="population">Affected Population</label>
                         <input type="number" id="population" min="0" placeholder="e.g., 50000" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Disaster Location Epicenter</label>
+                        <div id="inputMap" style="height: 200px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 10px; z-index: 1;"></div>
+                        <input type="hidden" id="lat" value="34.0522">
+                        <input type="hidden" id="lng" value="-118.2437">
+                        <small style="color:var(--text-secondary);">Click on the map to set the epicenter.</small>
                     </div>
 
                     <h3 class="section-title">Medical Resources</h3>
@@ -193,6 +204,17 @@
             <!-- Results Panel -->
             <div class="panel results-panel" id="resultsPanel" style="display: none;">
                 <h2>Assessment Results</h2>
+
+                <!-- New Comparison Card -->
+                <div class="result-card" id="comparisonCard" style="display: none; border-left: 4px solid var(--primary);">
+                    <div class="result-label">Comparison to Last Simulation</div>
+                    <div style="display:flex; justify-content:space-between; margin-top:10px;">
+                        <div>
+                            <strong>Similarity: </strong><span id="compSimilarity">--</span>%<br>
+                            <span id="compSummary" style="color:var(--text-secondary); font-size:14px;">--</span>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="result-card risk-card">
                     <div class="result-label">Risk Score</div>
@@ -216,6 +238,12 @@
                     <div class="result-label">Risk Assessment Breakdown</div>
                     <div class="reasoning-list" id="reasoningList"></div>
                 </div>
+
+                <div class="result-card map-card" id="mapCard" style="display: none;">
+                    <div class="result-label">Impact Zone</div>
+                    <div id="resultMap" style="height: 250px; border-radius: var(--radius); border: 1px solid var(--border); z-index: 1;"></div>
+                </div>
+
 
                 <!-- Re-evaluation Section -->
                 <div class="reevaluation-section" id="reevaluationSection">

@@ -85,6 +85,8 @@ class AIRecommendationService:
         population: int,
         risk_score: float,
         priority: str,
+        lat: float = None,
+        lng: float = None,
         medical_resources: Optional[Dict] = None,
         water_food_resources: Optional[Dict] = None,
         logistics_resources: Optional[Dict] = None,
@@ -102,6 +104,7 @@ class AIRecommendationService:
         # Build comprehensive prompt
         prompt = self._build_prompt(
             disaster_type, severity, population, risk_score, priority,
+            lat, lng,
             medical_resources, water_food_resources, logistics_resources,
             emergency_resources, infrastructure_quality, additional_context
         )
@@ -138,6 +141,8 @@ class AIRecommendationService:
         population: int,
         risk_score: float,
         priority: str,
+        lat: float,
+        lng: float,
         medical_resources: Optional[Dict],
         water_food_resources: Optional[Dict],
         logistics_resources: Optional[Dict],
@@ -153,6 +158,7 @@ SCENARIO:
 • Disaster: {disaster_type.upper()}
 • Severity: {severity}/10
 • Population: {population:,}
+• Location Coordinates: Latitude {lat}, Longitude {lng}
 • Risk Score: {risk_score:.1f}/100
 • Priority: {priority}
 
@@ -241,13 +247,15 @@ CRITICAL ACTIONS (Prioritized by urgency):
 
 EMERGENCY CONTACTS & RESOURCES:
 
-• National Emergency (India): 112 | Police: 100 | Fire: 101 | Ambulance: 102
+Based on the location coordinates provided (Latitude {lat}, Longitude {lng}), provide the CORRECT local emergency contacts for that specific country and region:
 
-• Disaster Management: 1078 | NDRF: +91-11-26105908 | ndma.gov.in
+• National Emergency number for that country | Police | Fire | Ambulance
 
-• Red Cross India: indianredcross.org | +91-11-23716441
+• National Disaster Management agency name and contact for that country
 
-• WHO India: who.int/india | State Emergency Operations: Contact local authorities
+• Nearest Red Cross / Red Crescent branch contact for that country
+
+• WHO Regional Office contact relevant to that country
 
 
 NEXT STEPS (Timeline):
@@ -271,7 +279,7 @@ CRITICAL REQUIREMENTS:
 - Each action point must be COMPREHENSIVE - combine multiple related issues
 - Each action must include specific numbers, quantities, and deployment details
 - Address ALL critical resource shortages across the 5-6 points
-- MUST include Emergency Contacts section with India numbers and websites
+- MUST include Emergency Contacts section with the CORRECT numbers for the country determined from the coordinates
 - MUST include Next Steps section with 5 timeline points
 - Total response: 500-700 words
 - Start directly with "CRITICAL ACTIONS (Prioritized by urgency):"

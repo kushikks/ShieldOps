@@ -198,11 +198,46 @@
             document.querySelector('.moon-icon').style.display = isDark ? 'block' : 'none';
         });
 
-        // Login form
-        document.getElementById('loginForm').addEventListener('submit', (e) => {
+        // Login and Register Form Handling
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            // Simple dummy login - just redirect to dashboard
-            window.location.href = '/dashboard';
+            const btn = document.querySelector('.login-btn');
+            const isRegistering = btn.innerText === 'Register';
+            const endpoint = isRegistering ? '/register' : '/login';
+            
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        password: document.getElementById('password').value
+                    })
+                });
+                
+                if (response.ok) {
+                    window.location.href = '/dashboard';
+                } else {
+                    const data = await response.json();
+                    showNotification('Error', data.error || 'Authentication failed', 'danger');
+                }
+            } catch (err) {
+                showNotification('Error', 'Connection failed. Please try again.', 'danger');
+            }
+        });
+
+        // Add a toggle link right above the login button
+        const form = document.getElementById('loginForm');
+        form.insertAdjacentHTML('beforeend', '<p id="toggle-auth" style="text-align:center; cursor:pointer; color:var(--primary); font-size:14px; margin-top:10px;">Need an account? Register here.</p>');
+        document.getElementById('toggle-auth').addEventListener('click', (e) => {
+            const btn = form.querySelector('.login-btn');
+            if(btn.innerText === 'Login') {
+                btn.innerText = 'Register';
+                e.target.innerText = 'Already have an account? Login here.';
+            } else {
+                btn.innerText = 'Login';
+                e.target.innerText = 'Need an account? Register here.';
+            }
         });
 
         // SOS button

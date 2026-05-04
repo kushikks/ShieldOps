@@ -3,7 +3,7 @@ Disaster Response Simulation & Decision Intelligence System
 Backend API with Flask
 """
 
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, redirect, url_for
 from flask_cors import CORS
 from datetime import datetime
 import os
@@ -14,11 +14,32 @@ import time
 # Load environment variables
 load_dotenv()
 
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
+from models import db, User, Simulation
+
 # Import AI service
 from ai_service import get_ai_service
 
 app = Flask(__name__)
 CORS(app)
+
+app.config['SECRET_KEY'] = 'shieldops_secret_key_123'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///shieldops.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
+
+login_manager = LoginManager()
+login_manager.login_view = 'login'
+login_manager.init_app(app)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return db.session.get(User, int(user_id))
+
+with app.app_context():
+    db.create_all()
 
 # Prometheus Metrics
 REQUEST_COUNT = Counter('app_request_count', 'Total number of requests', ['method', 'endpoint', 'http_status'])
@@ -261,22 +282,22 @@ def calculate_risk_score(severity, population, resources_available=50, infrastru
     """
     reasoning = []
     
-    # Base severity impact (0-50 points)
-    severity_impact = severity * 5
+    # Base severity impact (0-60 points)
+    severity_impact = severity * 6
     reasoning.append(f"Severity level {severity}/10 contributes {severity_impact} points to base risk")
     
-    # Population impact (0-30 points)
+    # Population impact (0-40 points)
     if population < 1000:
-        pop_impact = 5
+        pop_impact = 10
         pop_category = "small"
     elif population < 10000:
-        pop_impact = 12
+        pop_impact = 20
         pop_category = "moderate"
     elif population < 100000:
-        pop_impact = 22
+        pop_impact = 30
         pop_category = "large"
     else:
-        pop_impact = 30
+        pop_impact = 40
         pop_category = "very large"
     
     reasoning.append(f"Affected population of {population:,} ({pop_category} scale) adds {pop_impact} points")
@@ -578,23 +599,76 @@ def metrics():
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
 
+def compare_simulations(past_sim, current_sim_dict):
+    """Compares previous simulation object with new simulation dictionary."""
+    risk_diff = current_sim_dict['risk_score'] - past_sim.risk_score
+    pop_diff = current_sim_dict['population'] - past_sim.population
+    
+    # Calculate similarity score (basic implementation)
+    similarity = 100
+    if past_sim.disaster_type != current_sim_dict['disaster_type']: similarity -= 40
+    if abs(past_sim.severity - current_sim_dict['severity']) > 2: similarity -= 20
+    
+    summary = []
+    if risk_diff > 0:
+        summary.append(f"Risk increased by {risk_diff:.1f} points.")
+    elif risk_diff < 0:
+        summary.append(f"Risk decreased by {abs(risk_diff):.1f} points.")
+        
+    if pop_diff > 0:
+        summary.append(f"Population impacted increased by {pop_diff:,}.")
+        
+    return {
+        "similarity_score": max(0, similarity),
+        "summary": " ".join(summary) if summary else "Scenario is nearly identical to previous run.",
+        "previous_type": past_sim.disaster_type,
+        "previous_risk": past_sim.risk_score
+    }
+
+
 @app.route('/')
 def root():
     """Redirect to login page"""
-    from flask import redirect, url_for
     return redirect(url_for('login'))
 
 
-@app.route('/login')
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     """Serve the login page"""
+    if request.method == 'POST':
+        data = request.get_json() if request.is_json else request.form
+        user = User.query.filter_by(username=data.get('username')).first()
+        if user and check_password_hash(user.password, data.get('password')):
+            login_user(user)
+            return jsonify({'success': True}), 200
+        return jsonify({'error': 'Invalid credentials'}), 401
     return render_template('login.html')
+
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    if User.query.filter_by(username=data.get('username')).first():
+        return jsonify({'error': 'User already exists'}), 400
+    
+    hashed_password = generate_password_hash(data.get('password'), method='pbkdf2:sha256')
+    new_user = User(username=data.get('username'), password=hashed_password)
+    db.session.add(new_user)
+    db.session.commit()
+    login_user(new_user)
+    return jsonify({'success': True}), 200
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
 
 
 @app.route('/dashboard')
+@login_required
 def dashboard():
     """Serve the main dashboard"""
-    return render_template('index.html')
+    return render_template('index.html', username=current_user.username)
 
 
 @app.route('/health', methods=['GET'])
@@ -646,6 +720,8 @@ def simulate_disaster():
         disaster_type = data.get('disaster_type', '').lower()
         severity = data.get('severity')
         population = data.get('population')
+        lat = data.get('lat')
+        lng = data.get('lng')
         resources_available = data.get('resources_available', 50)
         infrastructure_quality = data.get('infrastructure_quality', 50)
         
@@ -715,6 +791,8 @@ def simulate_disaster():
             'priority': priority,
             'recommendation': recommendation,  # AI-generated
             'reasoning': reasoning,
+            'lat': lat,
+            'lng': lng,
             'timestamp': datetime.utcnow().isoformat()
         }
         
@@ -722,11 +800,33 @@ def simulate_disaster():
         simulation_history.append(response)
         if len(simulation_history) > 20:  # Keep last 20
             simulation_history.pop(0)
+            
+        comparison_result = None
+        if current_user.is_authenticated:
+            last_sim = Simulation.query.filter_by(user_id=current_user.id).order_by(Simulation.timestamp.desc()).first()
+            if last_sim:
+                comparison_result = compare_simulations(last_sim, response)
+            
+            new_sim = Simulation(
+                user_id=current_user.id,
+                disaster_type=disaster_type,
+                severity=severity,
+                population=population,
+                lat=lat,
+                lng=lng,
+                risk_score=risk_score,
+                recommendation=recommendation
+            )
+            db.session.add(new_sim)
+            db.session.commit()
+            
+            response['comparison'] = comparison_result
         
         return jsonify(response), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 
 @app.route('/api/history', methods=['GET'])
@@ -803,6 +903,8 @@ def reevaluate_disaster():
             population=original['population'],
             risk_score=new_risk_score,
             priority=new_priority,
+            lat=original.get('lat'),
+            lng=original.get('lng'),
             medical_resources=new_medical,
             water_food_resources=new_water_food,
             logistics_resources=new_logistics,
@@ -887,9 +989,14 @@ def get_learnings():
 
 
 def generate_insights():
-    """Generate insights from learned patterns"""
+    """Generate detailed insights from learned patterns"""
     if not learned_patterns:
-        return []
+        return [
+            "System is currently collecting data. Update simulations with new findings to train the intelligence engine.",
+            "Historical baseline: Medical Resources have the highest impact (35%) on overall risk mitigation.",
+            "Historical baseline: Water and Food supplies account for 30% of the vulnerability index.",
+            "Run and update simulations to unlock predictive trends for specific disaster types."
+        ]
     
     insights = []
     
@@ -898,14 +1005,16 @@ def generate_insights():
     if resource_improvements:
         avg_risk_reduction = sum(l['risk_change'] for l in resource_improvements) / len(resource_improvements)
         if avg_risk_reduction < 0:
-            insights.append(f"Increasing resources typically reduces risk by {abs(avg_risk_reduction):.1f} points on average")
+            impact = "HIGH" if abs(avg_risk_reduction) > 10 else "MODERATE"
+            insights.append(f"[{impact} IMPACT] Deploying additional general resources reduces risk by {abs(avg_risk_reduction):.1f} points on average.")
     
     # Analyze infrastructure impact
     infra_improvements = [l for l in learned_patterns if l['factors_changed']['infrastructure'] > 0]
     if infra_improvements:
         avg_risk_reduction = sum(l['risk_change'] for l in infra_improvements) / len(infra_improvements)
         if avg_risk_reduction < 0:
-            insights.append(f"Improving infrastructure typically reduces risk by {abs(avg_risk_reduction):.1f} points on average")
+            impact = "CRITICAL" if abs(avg_risk_reduction) > 15 else "MODERATE"
+            insights.append(f"[{impact} IMPACT] Infrastructure restoration typically yields a {abs(avg_risk_reduction):.1f} point drop in the risk index.")
     
     # Disaster-specific insights
     disaster_types = {}
@@ -917,7 +1026,10 @@ def generate_insights():
     
     for dtype, learnings in disaster_types.items():
         avg_change = sum(l['risk_change'] for l in learnings) / len(learnings)
-        insights.append(f"{dtype.capitalize()}: Average risk change after intervention is {avg_change:+.1f} points")
+        trend = "Deteriorating" if avg_change > 0 else "Improving"
+        insights.append(f"[TREND: {dtype.upper()}] Post-intervention situations are generally {trend} (Avg shift: {avg_change:+.1f} pts).")
+        
+    insights.append(f"Knowledge Base Active: {len(learned_patterns)} historical intervention patterns currently analyzed.")
     
     return insights
 
