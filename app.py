@@ -39,8 +39,6 @@ login_manager.init_app(app)
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-with app.app_context():
-    db.create_all()
 
 # Security Configuration
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching for all assets
@@ -1112,6 +1110,8 @@ def get_resource_options():
 
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     port = int(os.environ.get('PORT', 5000))
     # Bind to 127.0.0.1 by default for security, use HOST=0.0.0.0 for Docker
     host = os.environ.get('HOST', '127.0.0.1')

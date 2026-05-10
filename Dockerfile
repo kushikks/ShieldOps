@@ -19,4 +19,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:5000/health')"
 
 # Run application with gunicorn for production
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "60", "app:app"]
+# Run application with initialization first
+CMD python init_db.py && gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 1 --timeout 60 app:app

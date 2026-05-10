@@ -47,8 +47,8 @@ class AIRecommendationService:
 
                     # Define preference order
                     self.preferred_models = [
-                        'models/gemini-2.0-flash',
                         'models/gemini-1.5-flash',
+                        'models/gemini-2.0-flash',
                         'models/gemini-1.5-pro',
                         'models/gemini-pro'
                     ]
