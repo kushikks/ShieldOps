@@ -11,13 +11,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Expose port
+# Use unbuffered logging for better Render logs
+ENV PYTHONUNBUFFERED=1
+
+# Expose port (Render will override this with PORT env var)
 EXPOSE 5000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:5000/health')"
+# Improved Health check that respects PORT environment variable
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import requests, os; port = os.environ.get('PORT', '5000'); requests.get(f'http://localhost:{port}/health')"
 
-# Run application with gunicorn for production
 # Run application with initialization first
-CMD python init_db.py && gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 1 --timeout 60 app:app
+# We use one worker for SQLite stability on Render
+CMD python init_db.py && gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 1 --timeout 120 app:app

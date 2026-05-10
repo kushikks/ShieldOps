@@ -660,8 +660,8 @@ def compare_simulations(past_sim, current_sim_dict):
 
 @app.route('/')
 def root():
-    """Redirect to login page"""
-    return redirect(url_for('login'))
+    """Lightweight root redirect"""
+    return redirect(url_for('login'), code=302)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -705,10 +705,9 @@ def dashboard():
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint for monitoring"""
+    """Ultra-lightweight health check for Render/Gunicorn"""
     return jsonify({
         'status': 'healthy',
-        'service': 'Disaster Response System',
         'timestamp': datetime.utcnow().isoformat()
     }), 200
 
