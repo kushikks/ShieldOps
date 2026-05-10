@@ -704,12 +704,15 @@ def dashboard():
 
 
 @app.route('/health', methods=['GET'])
+@app.route('/health')
 def health_check():
-    """Ultra-lightweight health check for Render/Gunicorn"""
-    return jsonify({
-        'status': 'healthy',
-        'timestamp': datetime.utcnow().isoformat()
-    }), 200
+    from datetime import datetime
+
+    return {
+        "status": "healthy",
+        "service": "Disaster Response System",
+        "timestamp": datetime.utcnow().isoformat()
+    }, 200
 
 
 @app.route('/api/simulate', methods=['POST'])
