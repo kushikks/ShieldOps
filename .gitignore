@@ -63,3 +63,6 @@ report_*.md
 zap_reports/
 
 docs/
+semgrep-report.json
+safety-report.json
+trivy-report.json
