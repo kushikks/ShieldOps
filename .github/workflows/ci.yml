@@ -137,13 +137,13 @@ jobs:
 
       - name: OWASP ZAP Baseline Scan (Direct Docker)
         run: |
-          # Use $(pwd) and explicit paths to ensure the mount and config are found
+          # Use $(pwd) and relative paths for outputs to avoid double-path resolution bugs
           docker run --network=host -v $(pwd):/zap/wrk/:rw -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
             -t http://localhost:5000 \
             -c /zap/wrk/zap.conf \
-            -J /zap/wrk/report_json.json \
-            -w /zap/wrk/report_md.md \
-            -r /zap/wrk/report_html.html || true
+            -J report_json.json \
+            -w report_md.md \
+            -r report_html.html || true
 
       - name: Upload ZAP Security Reports
         uses: actions/upload-artifact@v4
