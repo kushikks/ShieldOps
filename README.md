@@ -8,15 +8,15 @@
 
 ---
 
-## 🚀 Project Overview
+##  Project Overview
 **ShieldOps** is a comprehensive disaster management simulation and decision intelligence platform. It empowers emergency responders and planners to simulate various disaster scenarios (Floods, Earthquakes, Fires, etc.), evaluate risks using a context-aware scoring engine, and receive AI-powered actionable recommendations.
 
 The project is built with a **DevOps-first mindset**, featuring fully automated CI/CD pipelines, container orchestration, multi-layered security scanning, and proactive monitoring.
 
-## ⚠️ Problem Statement
+##  Problem Statement
 In the immediate aftermath of a disaster, decision-makers often lack clear, data-driven insights into resource allocation and priority areas. Existing systems are often siloed, lacking the integration of real-time situational updates and automated security assurance. ShieldOps solves this by providing a unified, secure, and resilient intelligence system that grows more effective with each simulation.
 
-## ✨ Key Features
+##  Key Features
 - **Multi-Hazard Simulation:** Support for 8 distinct disaster types with location-aware parameters.
 - **Explainable Risk Scoring:** A weighted intelligence engine that accounts for medical, water/food, logistics, and emergency resource gaps.
 - **Resilient Multi-Provider AI:** Fail-safe integration with **Google Gemini**, **OpenRouter**, and **Ollama** for generating detailed response plans.
@@ -25,7 +25,7 @@ In the immediate aftermath of a disaster, decision-makers often lack clear, data
 - **Intelligence Insights:** A learning engine that analyzes historical patterns to provide predictive response trends.
 - **Health & Metrics:** Native support for Prometheus scraping and system health monitoring.
 
-## 🛠️ Tech Stack
+##  Tech Stack
 - **Backend:** Flask (Python 3.12), SQLAlchemy (SQLite)
 - **Frontend:** Vanilla HTML5, CSS3 (Glassmorphism UI), JavaScript (ES6)
 - **Maps:** Leaflet.js (OpenStreetMap)
@@ -34,7 +34,7 @@ In the immediate aftermath of a disaster, decision-makers often lack clear, data
 - **Monitoring:** Prometheus, Grafana
 - **Testing:** Pytest
 
-## 🛡️ DevOps & Security Pipeline
+##  DevOps & Security Pipeline
 The project features a robust **GitHub Actions CI/CD pipeline** with the following quality gates:
 
 1.  **Build & Unit Testing:** Automated execution of 65+ test cases using `pytest`.
@@ -43,7 +43,7 @@ The project features a robust **GitHub Actions CI/CD pipeline** with the followi
 4.  **FS Scan:** Container filesystem and configuration scanning using `Trivy`.
 5.  **DAST (Dynamic Analysis):** Automated web application vulnerability scanning using `OWASP ZAP`.
 
-## 📊 Monitoring Setup
+##  Monitoring Setup
 - **Prometheus:** Scrapes application metrics (Request counts, latency, health status) from `/metrics`.
 - **Grafana:** Visualizes metrics through pre-configured dashboards.
 
@@ -88,7 +88,7 @@ The project is optimized for deployment on **Render** via Docker:
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 ```text
 ShieldOps/
 ├── app.py                # Main Flask Application
@@ -108,12 +108,9 @@ ShieldOps/
 └── .github/workflows/    # CI/CD Configuration
 ```
 
-## 📸 Screenshots
-*[Add screenshots here: Dashboard, Simulation Results, Comparison View, Grafana Dashboard]*
 
----
 
-## 🤝 Contributors
+##  Contributors
 - **Kushi Kaveramma K S** (1MS23CS095)
 - **Manya Ravishankar** (1MS23CS227)
 
