@@ -49,7 +49,7 @@ The project features a robust **GitHub Actions CI/CD pipeline** with the followi
 
 ---
 
-## 🚀 Installation & Setup
+##  Installation & Setup
 
 ### 1. Local Environment Setup
 ```bash
