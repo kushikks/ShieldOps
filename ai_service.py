@@ -7,6 +7,7 @@ import os
 import json
 from typing import Dict, List, Optional
 import requests
+from openai import OpenAI
 
 
 class AIRecommendationService:
@@ -15,6 +16,8 @@ class AIRecommendationService:
     def __init__(self):
         self.use_local_ai = os.getenv('USE_LOCAL_AI', 'false').lower() == 'true'
         self.gemini_api_key = os.getenv('GEMINI_API_KEY')
+        self.openrouter_api_key = os.getenv('OPENROUTER_API_KEY')
+        self.openrouter_model = os.getenv('OPENROUTER_MODEL', 'meta-llama/llama-3.1-8b-instruct:free')
         self.ollama_base_url = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
         self.ollama_model = os.getenv('OLLAMA_MODEL', 'llama2')
         
@@ -22,8 +25,11 @@ class AIRecommendationService:
         print(f"[AI Service] Initializing...")
         print(f"[AI Service] USE_LOCAL_AI: {self.use_local_ai}")
         print(f"[AI Service] GEMINI_API_KEY present: {bool(self.gemini_api_key)}")
+        print(f"[AI Service] OPENROUTER_API_KEY present: {bool(self.openrouter_api_key)}")
         if self.gemini_api_key:
             print(f"[AI Service] GEMINI_API_KEY length: {len(self.gemini_api_key)}")
+        if self.openrouter_api_key:
+            print(f"[AI Service] OPENROUTER_MODEL: {self.openrouter_model}")
         
         # Initialize Gemini client if using cloud AI
         if not self.use_local_ai and self.gemini_api_key:
@@ -45,8 +51,9 @@ class AIRecommendationService:
                         self.gemini_model = None
                         return
 
-                    # Define preference order
+                    # Define preference order (optimized for free tier availability)
                     self.preferred_models = [
+                        'models/gemini-2.0-flash-lite',
                         'models/gemini-1.5-flash',
                         'models/gemini-2.0-flash',
                         'models/gemini-1.5-pro',
@@ -83,7 +90,22 @@ class AIRecommendationService:
             if self.use_local_ai:
                 print("[AI Service] Using local AI (Ollama)")
             else:
-                print("[AI Service] ✗ No GEMINI_API_KEY found - using fallback")
+                print("[AI Service] ✗ No GEMINI_API_KEY found")
+
+        # Initialize OpenRouter client if key present
+        if self.openrouter_api_key:
+            try:
+                self.openrouter_client = OpenAI(
+                    base_url="https://openrouter.ai/api/v1",
+                    api_key=self.openrouter_api_key,
+                )
+                print("[AI Service] ✓ OpenRouter client initialized successfully")
+            except Exception as e:
+                print(f"[AI Service] ✗ OpenRouter initialization error: {e}")
+                self.openrouter_client = None
+        else:
+            self.openrouter_client = None
+            print("[AI Service] ✗ No OPENROUTER_API_KEY found")
     
     def generate_recommendation(
         self,
@@ -125,21 +147,30 @@ class AIRecommendationService:
         except Exception:
             pass
             
-        # Try AI generation
-        try:
-            if self.use_local_ai:
-                print("[AI Service] Attempting Ollama generation...")
-                return self._generate_with_ollama(prompt)
-            elif self.gemini_model:
-                print("[AI Service] Attempting Gemini generation...")
-                return self._generate_with_gemini(prompt)
-            else:
-                print("[AI Service] No AI available - using fallback")
-                return self._generate_fallback(disaster_type, priority, additional_context)
-        except Exception as e:
-            print(f"[AI Service] AI generation failed: {type(e).__name__}: {e}")
-            print("[AI Service] Falling back to rule-based recommendations")
-            return self._generate_fallback(disaster_type, priority, additional_context)
+        # Try AI generation with providers in sequence
+        # Order: 1. Preferred (Local vs Cloud), 2. Fallbacks
+        providers = []
+        
+        if self.use_local_ai:
+            providers.append(('Ollama', self._generate_with_ollama))
+            if self.gemini_model: providers.append(('Gemini', self._generate_with_gemini))
+            if self.openrouter_client: providers.append(('OpenRouter', self._generate_with_openrouter))
+        else:
+            if self.gemini_model: providers.append(('Gemini', self._generate_with_gemini))
+            if self.openrouter_client: providers.append(('OpenRouter', self._generate_with_openrouter))
+            providers.append(('Ollama', self._generate_with_ollama))
+
+        for name, func in providers:
+            try:
+                print(f"[AI Service] Attempting {name} generation...")
+                return func(prompt)
+            except Exception as e:
+                print(f"[AI Service] {name} generation failed: {type(e).__name__}")
+                continue
+
+        # If all AI providers fail, use hardcoded fallback
+        print("[AI Service] All AI providers failed or unavailable - using rule-based fallback")
+        return self._generate_fallback(disaster_type, priority, additional_context)
     
     def _build_prompt(
         self,
@@ -315,9 +346,9 @@ CRITICAL REQUIREMENTS:
             return response.text.strip()
         
         except Exception as e:
-            # If 403 Permission Denied, try the next available model in the preference list
-            if "403" in str(e) or "PermissionDenied" in type(e).__name__:
-                print(f"[AI Service] ✗ Gemini 403 Error with {self.current_model_name}")
+            # If 403 Permission Denied or 429 Quota Exceeded, try the next available model
+            if any(err in str(e) for err in ["403", "429", "PermissionDenied", "ResourceExhausted"]):
+                print(f"[AI Service] ✗ Gemini Error ({type(e).__name__}) with {self.current_model_name}")
                 
                 # Try to find the next model to use
                 next_index = self.current_model_index + 1
@@ -368,6 +399,28 @@ CRITICAL REQUIREMENTS:
         
         except Exception as e:
             print(f"Ollama API error: {e}")
+            raise
+
+    def _generate_with_openrouter(self, prompt: str) -> str:
+        """Generate recommendation using OpenRouter API"""
+        if not self.openrouter_client:
+            raise ValueError("OpenRouter client not initialized")
+
+        try:
+            response = self.openrouter_client.chat.completions.create(
+                model=self.openrouter_model,
+                messages=[
+                    {"role": "system", "content": "You are an expert disaster response coordinator."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=2048,
+            )
+            
+            print("[AI Service] ✓ OpenRouter API call successful")
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            print(f"OpenRouter API error: {e}")
             raise
     
     def _generate_fallback(self, disaster_type: str, priority: str, additional_context: str) -> str:

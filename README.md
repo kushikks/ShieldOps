@@ -4,6 +4,8 @@
 - **Manya Ravishankar** – 1MS23CS227
 - **Kushi Kaveramma K S** – 1MS23CS095
 
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen?style=for-the-badge&logo=render)](https://shieldops-eiqm.onrender.com/)
+
 ---
 
 ## 🚀 Project Overview
@@ -17,7 +19,7 @@ In the immediate aftermath of a disaster, decision-makers often lack clear, data
 ## ✨ Key Features
 - **Multi-Hazard Simulation:** Support for 8 distinct disaster types with location-aware parameters.
 - **Explainable Risk Scoring:** A weighted intelligence engine that accounts for medical, water/food, logistics, and emergency resource gaps.
-- **AI-Powered Recommendations:** Integration with Google Gemini for generating detailed, situation-specific response plans.
+- **Resilient Multi-Provider AI:** Fail-safe integration with **Google Gemini**, **OpenRouter**, and **Ollama** for generating detailed response plans.
 - **Interactive Geospatial View:** Leaflet-based map integration for precise disaster location tagging.
 - **Situation Re-evaluation:** Compare original assessments with post-intervention data to track situational improvement.
 - **Intelligence Insights:** A learning engine that analyzes historical patterns to provide predictive response trends.
@@ -26,8 +28,8 @@ In the immediate aftermath of a disaster, decision-makers often lack clear, data
 ## 🛠️ Tech Stack
 - **Backend:** Flask (Python 3.12), SQLAlchemy (SQLite)
 - **Frontend:** Vanilla HTML5, CSS3 (Glassmorphism UI), JavaScript (ES6)
-- **Maps:** Leaflet.js
-- **AI:** Google Gemini API (with resilient model rotation)
+- **Maps:** Leaflet.js (OpenStreetMap)
+- **AI Engine:** Google Gemini, OpenRouter (Llama 3.1/Gemma), and Ollama (Local)
 - **Containerization:** Docker, Docker Compose
 - **Monitoring:** Prometheus, Grafana
 - **Testing:** Pytest
@@ -78,6 +80,12 @@ docker compose up --build -d
 - **Grafana:** http://localhost:3000
 - **Metrics Endpoint:** http://localhost:5000/metrics
 
+### 3. Production Deployment (Render)
+The project is optimized for deployment on **Render** via Docker:
+- **Automatic Initialization:** `init_db.py` handles database setup before the web server starts.
+- **Gunicorn:** Production-grade WSGI server with single-worker configuration for SQLite stability.
+- **Dynamic Port Binding:** Automatically respects the `$PORT` environment variable.
+
 ---
 
 ## 📂 Project Structure
@@ -85,7 +93,8 @@ docker compose up --build -d
 ShieldOps/
 ├── app.py                # Main Flask Application
 ├── models.py             # Database Models
-├── ai_service.py         # Gemini/Ollama Integration
+├── ai_service.py         # Multi-Provider AI Integration
+├── init_db.py            # Database Initialization Script
 ├── requirements.txt      # Dependency List
 ├── Dockerfile            # Container Specification
 ├── docker-compose.yml    # Service Orchestration

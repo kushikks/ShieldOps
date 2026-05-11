@@ -61,3 +61,5 @@ report_*.html
 report_*.json
 report_*.md
 zap_reports/
+
+docs/

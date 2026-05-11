@@ -42,15 +42,14 @@ Disaster response often suffers from information overload and fragmented resourc
 The ShieldOps architecture is divided into four main layers:
 
 1.  **Presentation Layer:** Responsive HTML/JS frontend using Leaflet for geospatial visualization.
-2.  **Intelligence Layer:** A Python-based simulation engine that calculates weighted risk scores and interfaces with the Google Gemini API for recommendations.
+2.  **Intelligence Layer:** A Python-based simulation engine that calculates weighted risk scores and interfaces with the Google Gemini and OpenRouter APIs for resilient recommendations.
 3.  **Persistence Layer:** SQLite database managed by SQLAlchemy for simulation history and learning records.
-4.  **DevOps Layer:** Containerized services orchestrated by Docker Compose, monitored by Prometheus, and guarded by GitHub Actions.
+4.  **DevOps Layer:** Containerized services orchestrated by Docker Compose (local) or Render (production), monitored by Prometheus.
 
 #### Text-Based Diagram:
-```text
 [ User Browser ] <--> [ Flask App (Gunicorn) ] <--> [ SQLite DB ]
                             |             |
-                            |             +--> [ Gemini AI API ]
+                            |             +--> [ Gemini / OpenRouter API ]
                             |
                     [ Prometheus ] <--> [ Grafana Dashboard ]
 ```
@@ -69,7 +68,7 @@ The GitHub Actions workflow (`ci.yml`) executes the following stages sequentiall
 
 ### 7. Implementation Details
 - **Risk Score Calculation:** Uses a weighted formula: `(Severity * Population) / (Resources * Infrastructure)`. Contextual inputs (e.g., "Roads blocked") apply dynamic modifiers to the final score.
-- **AI Recommendation Engine:** Implements a resilient model rotation system. If the primary model (Gemini 2.0) returns a 403 error, the system automatically falls back to 1.5-Flash or Pro versions.
+- **AI Recommendation Engine:** Implements a resilient multi-provider fallback system. The system attempts generation via **Google Gemini** (with internal model rotation), falling back to **OpenRouter** (Llama 3.1) and finally local **Ollama** or rule-based logic to ensure 100% availability.
 - **Simulation Comparison:** The re-evaluation feature allows users to load a past simulation, update resource parameters, and see the delta in risk and priority.
 - **Monitoring:** Custom Prometheus metrics track `http_requests_total` and `app_request_latency_seconds`.
 
@@ -78,14 +77,14 @@ The GitHub Actions workflow (`ci.yml`) executes the following stages sequentiall
   - **Solution:** Relaxed COEP headers to allow external map tiles while maintaining CSP.
 - **Challenge:** Safety scan EOF errors in CI.
   - **Solution:** Downgraded to Safety 2.4.0 to avoid mandatory interactive login prompts.
-- **Challenge:** Gemini API 403 errors.
-  - **Solution:** Built an automatic model rotation logic to handle regional/permission restrictions.
+- **Challenge:** Gemini API 429/403 errors (Quota/Permission).
+  - **Solution:** Implemented a provider-level fallback mechanism that automatically switches to OpenRouter when Gemini limits are reached.
 
 ### 9. Results and Validation
 - **Stability:** 100% test pass rate.
 - **Security:** Clean reports from Semgrep, Safety, and Trivy.
 - **Visibility:** Real-time metrics available in Prometheus.
-- **Scalability:** Docker-ready for deployment to any cloud provider.
+- **Scalability:** Docker-ready and successfully deployed to **Render** at [shieldops-eiqm.onrender.com](https://shieldops-eiqm.onrender.com/).
 
 ### 10. Future Enhancements
 - **Real-Time Data:** Integration with USGS or weather APIs for live disaster feeds.
